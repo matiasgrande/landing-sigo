@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useRef } from "react";
 import {
   gsap,
@@ -10,16 +11,7 @@ import {
 } from "@/lib/gsap";
 import { TituloSeccion, Revelar } from "@/componentes/Revelar";
 import { IconoTrofeo, IconoCorazon, IconoGlobo } from "@/componentes/Iconos";
-
-const ALIADOS = [
-  "Alimentos Polar",
-  "Coca-Cola FEMSA",
-  "Alimentos Mary",
-  "Natulac",
-  "Pastas Ronco",
-  "Alfonzo Rivas & Cía",
-  "La Lucha",
-];
+import { MARCAS_ALIADAS } from "@/datos/aliados";
 
 const INICIATIVAS = [
   {
@@ -107,24 +99,35 @@ export function Comunidad() {
         </div>
       </div>
 
-      {/* Marquesina de marcas aliadas */}
-      <div className="mt-20" aria-label="Marcas aliadas">
-        <p className="mb-5 text-center text-xs font-extrabold uppercase tracking-[0.2em] text-gris">De la mano de marcas que quieres</p>
-        <div className="sin-barra relative flex overflow-x-auto px-5 md:overflow-hidden md:px-0 md:[mask-image:linear-gradient(90deg,transparent,black_10%,black_90%,transparent)]">
-          <ul data-marquesina className="flex w-max shrink-0 gap-3 pr-3">
-            {[...ALIADOS, ...ALIADOS].map((aliado, indice) => (
-              <li
-                key={`${aliado}-${indice}`}
-                aria-hidden={indice >= ALIADOS.length}
-                className={`whitespace-nowrap rounded-full bg-white px-6 py-3 text-lg font-black text-azul/70 ring-1 ring-azul/10 ${
-                  indice >= ALIADOS.length ? "hidden md:block" : ""
-                }`}
-              >
-                {aliado}
-              </li>
-            ))}
+      {/* Marquesina de marcas aliadas (en móvil, fila deslizable) */}
+      <div className="mt-20">
+        <h3 className="mb-6 text-center text-xs font-extrabold uppercase tracking-[0.2em] text-gris">
+          De la mano de marcas que quieres
+        </h3>
+        <div className="sin-barra relative flex overflow-x-auto px-5 md:overflow-hidden md:px-0 md:[mask-image:linear-gradient(90deg,transparent,black_8%,black_92%,transparent)]">
+          <ul data-marquesina aria-label="Marcas aliadas" className="flex w-max shrink-0 gap-3 pr-3 md:gap-4 md:pr-4">
+            {[...MARCAS_ALIADAS, ...MARCAS_ALIADAS].map((marca, indice) => {
+              const duplicado = indice >= MARCAS_ALIADAS.length;
+              return (
+                <li
+                  key={`${marca.nombre}-${indice}`}
+                  aria-hidden={duplicado || undefined}
+                  className={`h-24 w-40 shrink-0 items-center justify-center rounded-3xl bg-white p-4 shadow-sm ring-1 ring-azul/10 md:h-28 md:w-48 ${
+                    duplicado ? "hidden md:flex" : "flex"
+                  }`}
+                >
+                  <Image
+                    src={marca.logo}
+                    alt={duplicado ? "" : marca.nombre}
+                    sizes="12rem"
+                    className="max-h-full w-auto max-w-full object-contain"
+                  />
+                </li>
+              );
+            })}
           </ul>
         </div>
+        <p className="mt-4 text-center text-[0.7rem] text-gris md:hidden">Desliza para ver más →</p>
       </div>
     </section>
   );
