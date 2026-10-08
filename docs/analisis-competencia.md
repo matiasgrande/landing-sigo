@@ -90,11 +90,22 @@ Patrones presentes en la mayoría de los referentes:
   - Sigo +7 Ecoland (Hotel Sunsol Ecoland)
   - Sigo +8 Isla Caribe (Hotel Sunsol Isla Caribe)
 
+- Medios de pago adicionales confirmados: **Pago Móvil** y **Cashea (Línea Cotidiana)**.
+- Fichas de Google Maps de los 3 Supermarket (consultadas el 8 oct 2026):
+
+| Tienda | Dirección (Google Maps) | Horario visto | Teléfono |
+|---|---|---|---|
+| Supermarket Costazul | C.C. Parque Costazul, Zona Este, Av. Jóvito Villalba, Pampatar | 8:00–22:00 | — |
+| Supermarket Sambil | C.C. Sambil Margarita, Av. Luisa Cáceres de Arismendi, Pampatar | 8:00–22:00 | +58 412-529-6412 |
+| Porlamar (ficha "Sigo S.A") | C.C. Sigo, Av. Juan Bautista Arismendi con Calle Prica, Porlamar | 8:00–18:00 | +58 295-265-2000 |
+
+> Google Maps, en vista limitada, solo muestra el horario del día de la consulta (jueves). La landing lo presenta como "horario de referencia" y calcula "Abierto/Cerrado ahora" con la hora de Margarita (UTC-4).
+
 ## 7. Pendientes por confirmar
 
-- Horarios de cada sucursal (la landing muestra "Consulta el horario por WhatsApp" hasta tenerlos).
-- Coordenadas exactas o enlaces de Google Maps por tienda.
-- Logo en alta resolución o vector (la propuesta usa el PNG de 120 px del sitio actual) y manual de marca desde el ERP.
-- Si se acepta Pago Móvil y Cashea (no aparecen en el sitio actual, así que no se publican).
-- Fotografías propias de tiendas y equipo.
+- Horario semanal completo (y de feriados) de cada tienda; horarios de bodegones y Sigo +.
+- Ubicación en Google Maps de los bodegones y de las tiendas Sigo +.
+- Si la tienda de Porlamar es la misma que el sitio actual llama "C.C. Parque Porlamar, entrada Oeste" (Google la ubica en C.C. Sigo, Calle Prica).
+- Logo en alta resolución o vector (la propuesta usa el PNG de 120 px del sitio actual) y manual de marca desde el ERP. En la fachada de Costazul se ve un rojo institucional en el mural "Servimos con amor" que conviene incorporar a la paleta.
+- **Fotografías**: la propuesta usa fotos públicas de Google Maps con crédito a sus autores (Rossmar Maicán, Daniel Martínez, Alfredo Guánchez). Son de terceros: para publicar en producción hay que reemplazarlas por fotos propias de SIGO o pedir permiso a los autores.
 - Afirmaciones sobre puerto libre: requieren validación legal antes de publicarse.

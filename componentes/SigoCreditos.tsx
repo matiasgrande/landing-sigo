@@ -13,6 +13,8 @@ const PASOS = [
 ];
 
 const PAGOS = [
+  "Pago Móvil",
+  "Cashea",
   "Zelle",
   "PayPal",
   "Efectivo en divisas",
@@ -39,6 +41,17 @@ export function SigoCreditos() {
           ease: "back.out(1.8)",
           scrollTrigger: { trigger: "[data-lista-pagos]", start: "top 90%", once: true },
         });
+        // Sello de Cashea que gira levemente con el scroll
+        gsap.fromTo(
+          "[data-cashea]",
+          { rotate: -20, scale: 0.8 },
+          {
+            rotate: 8,
+            scale: 1,
+            ease: "none",
+            scrollTrigger: { trigger: "[data-cashea]", start: "top bottom", end: "top 40%", scrub: true },
+          },
+        );
         // Brillo de fondo con parallax
         gsap.to("[data-brillo-creditos]", {
           yPercent: 80,
@@ -102,6 +115,25 @@ export function SigoCreditos() {
               </li>
             ))}
           </ul>
+
+          {/* Cashea: compra ahora y paga en cuotas */}
+          <Revelar className="mt-8">
+            <div className="flex flex-col gap-5 rounded-[2rem] bg-white p-6 text-azul sm:flex-row sm:items-center sm:justify-between sm:p-8">
+              <div>
+                <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-verde">Línea Cotidiana</p>
+                <p className="mt-2 text-2xl font-black sm:text-3xl">Haz tu mercado hoy y págalo en cuotas con Cashea</p>
+                <p className="mt-2 text-gris">Disponible en nuestras tiendas con tu línea Cotidiana de Cashea.</p>
+              </div>
+              <span
+                data-cashea
+                className="grid h-24 w-24 shrink-0 place-items-center rounded-full bg-sol text-center text-sm font-black leading-tight text-azul shadow-lg"
+              >
+                Paga en
+                <br />
+                cuotas
+              </span>
+            </div>
+          </Revelar>
         </div>
       </div>
     </section>

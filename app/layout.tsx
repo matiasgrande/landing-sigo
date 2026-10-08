@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Nunito } from "next/font/google";
 import type { ReactNode } from "react";
-import { SUCURSALES } from "@/datos/sucursales";
+import { SUCURSALES, crearEnlaceMapa } from "@/datos/sucursales";
 import { REDES, WHATSAPP_ATENCION, URL_ECOMMERCE, ANIO_FUNDACION } from "@/datos/contacto";
 import "./globals.css";
 
@@ -67,7 +67,13 @@ const datosEstructurados = {
         addressRegion: "Nueva Esparta",
         addressCountry: "VE",
       },
+      hasMap: crearEnlaceMapa(sucursal),
+      ...(sucursal.coordenadas && {
+        geo: { "@type": "GeoCoordinates", latitude: sucursal.coordenadas.lat, longitude: sucursal.coordenadas.lng },
+      }),
+      ...(sucursal.telefono && { telephone: sucursal.telefono }),
       currenciesAccepted: "USD, VES",
+      paymentAccepted: "Pago Móvil, Cashea, Zelle, PayPal, efectivo, transferencia, tarjeta de débito",
     })),
   ],
 };

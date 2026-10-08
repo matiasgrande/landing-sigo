@@ -1,14 +1,17 @@
 "use client";
 
+import Image, { type StaticImageData } from "next/image";
 import { useRef } from "react";
 import { gsap, useGSAP, CON_MOVIMIENTO } from "@/lib/gsap";
 import { calcularAniosTrayectoria } from "@/datos/contacto";
 import { TituloSeccion, Revelar } from "@/componentes/Revelar";
+import fotoPorlamar from "@/recursos/fotos/tienda-porlamar-2010.webp";
 
 interface Hito {
   marca: string;
   titulo: string;
   texto: string;
+  foto?: { imagen: StaticImageData; alt: string; pie: string };
 }
 
 export function Historia() {
@@ -26,6 +29,17 @@ export function Historia() {
             scaleY: 1,
             ease: "none",
             scrollTrigger: { trigger: referencia.current, start: "top 75%", end: "bottom 60%", scrub: 0.6 },
+          },
+        );
+        // Foto de archivo: pasa de sepia a color al recorrerla
+        gsap.fromTo(
+          "[data-foto-hito] img",
+          { filter: "sepia(0.9) saturate(0.6)", scale: 1.12 },
+          {
+            filter: "sepia(0) saturate(1)",
+            scale: 1,
+            ease: "none",
+            scrollTrigger: { trigger: "[data-foto-hito]", start: "top 85%", end: "bottom 45%", scrub: true },
           },
         );
         // Cada punto "se enciende" al alcanzarlo
@@ -53,11 +67,16 @@ export function Historia() {
       marca: "Raíces",
       titulo: "La Proveeduría",
       texto: "El negocio crece y se convierte en La Proveeduría, en Pedregales y Porlamar: la base de lo que hoy es Sigo.",
+      foto: {
+        imagen: fotoPorlamar,
+        alt: "Entrada central de Sigo en Porlamar en 2010, con el logo de la época en rosado",
+        pie: "Sigo Porlamar, 2010 · Foto: Alfredo Guánchez · Google Maps",
+      },
     },
     {
       marca: "Crecer",
       titulo: "Sigo Supermarket",
-      texto: "Llegamos a Parque Porlamar, Parque Costazul y Sambil Margarita, con bodegones para importados y licores.",
+      texto: "Crecemos en Porlamar y llegamos a Parque Costazul y Sambil Margarita, con bodegones para importados y licores.",
     },
     {
       marca: "Digital",
@@ -119,6 +138,20 @@ export function Historia() {
                   </p>
                   <h3 className="mt-2 text-2xl font-black text-azul">{hito.titulo}</h3>
                   <p className={`mt-2 max-w-md text-gris ${derecha ? "" : "md:ml-auto"}`}>{hito.texto}</p>
+                  {hito.foto && (
+                    <figure className={`mt-5 max-w-md ${derecha ? "" : "md:ml-auto"}`}>
+                      <div data-foto-hito className="relative aspect-[4/3] overflow-hidden rounded-3xl bg-azul-100">
+                        <Image
+                          src={hito.foto.imagen}
+                          alt={hito.foto.alt}
+                          fill
+                          sizes="(min-width: 768px) 28rem, 100vw"
+                          className="object-cover"
+                        />
+                      </div>
+                      <figcaption className="mt-2 text-xs text-gris">{hito.foto.pie}</figcaption>
+                    </figure>
+                  )}
                 </Revelar>
               </li>
             );
