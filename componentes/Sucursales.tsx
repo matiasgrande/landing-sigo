@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { gsap, useGSAP, Flip, CON_MOVIMIENTO, ESCRITORIO_CON_MOVIMIENTO } from "@/lib/gsap";
+import { gsap, useGSAP, Flip, ScrollTrigger, CON_MOVIMIENTO, ESCRITORIO_CON_MOVIMIENTO } from "@/lib/gsap";
 import {
   SUCURSALES,
   ETIQUETAS_FORMATO,
@@ -61,8 +61,13 @@ export function Sucursales() {
   useGSAP(
     () => {
       const estado = estadoFlip.current;
-      if (!estado) return;
       estadoFlip.current = null;
+      // El filtro cambia la altura de la sección: sin recalcular, los ScrollTrigger de
+      // las secciones siguientes quedan desfasados y su contenido no aparece
+      if (!estado) {
+        ScrollTrigger.refresh();
+        return;
+      }
       Flip.from(estado, {
         targets: "[data-sucursal], [data-flip-id='filtro-activo']",
         duration: 0.6,
@@ -72,6 +77,8 @@ export function Sucursales() {
         onEnter: (elementos) =>
           gsap.fromTo(elementos, { autoAlpha: 0, scale: 0.9 }, { autoAlpha: 1, scale: 1, duration: 0.5, delay: 0.1 }),
         onLeave: (elementos) => gsap.to(elementos, { autoAlpha: 0, scale: 0.9, duration: 0.3 }),
+        onComplete: () => ScrollTrigger.refresh(),
+        onInterrupt: () => ScrollTrigger.refresh(),
       });
     },
     { dependencies: [filtro], scope: seccion },
