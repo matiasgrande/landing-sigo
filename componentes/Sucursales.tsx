@@ -47,6 +47,8 @@ export function Sucursales() {
   const [filtro, setFiltro] = useState<Filtro>("todas");
   const seccion = useRef<HTMLElement>(null);
   const estadoFlip = useRef<Flip.FlipState | null>(null);
+  const rejilla = useRef<HTMLUListElement>(null);
+  const altoAnterior = useRef<number | null>(null);
   const estados = useEstadosApertura();
 
   // Guarda posiciones antes del cambio para animarlas con Flip después del render
@@ -54,6 +56,7 @@ export function Sucursales() {
     if (nuevo === filtro) return;
     if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       estadoFlip.current = Flip.getState("[data-sucursal], [data-flip-id='filtro-activo']");
+      altoAnterior.current = rejilla.current?.offsetHeight ?? null;
     }
     setFiltro(nuevo);
   }
@@ -67,6 +70,21 @@ export function Sucursales() {
       if (!estado) {
         ScrollTrigger.refresh();
         return;
+      }
+      // Flip saca las tarjetas del flujo (absolute) y la rejilla colapsaría a 0 px,
+      // haciendo saltar todo lo de abajo: se fija su alto y se anima al nuevo
+      const lista = rejilla.current;
+      const altoInicial = altoAnterior.current;
+      altoAnterior.current = null;
+      if (lista && altoInicial !== null) {
+        gsap.killTweensOf(lista);
+        gsap.set(lista, { clearProps: "height" });
+        const altoFinal = lista.offsetHeight;
+        gsap.fromTo(
+          lista,
+          { height: altoInicial },
+          { height: altoFinal, duration: 0.6, ease: "power2.inOut", clearProps: "height" },
+        );
       }
       Flip.from(estado, {
         targets: "[data-sucursal], [data-flip-id='filtro-activo']",
@@ -173,17 +191,25 @@ export function Sucursales() {
                 onClick={() => cambiarFiltro(opcion.valor)}
                 aria-pressed={activo}
                 className={`relative shrink-0 rounded-full px-5 py-2.5 text-sm font-extrabold transition-colors ${
-                  activo ? "text-white" : "bg-crema text-azul hover:bg-azul-100"
+                  activo ? "" : "bg-crema hover:bg-azul-100"
                 }`}
               >
                 {activo && <span data-flip-id="filtro-activo" className="absolute inset-0 rounded-full bg-azul" />}
-                <span className="relative">{opcion.texto}</span>
+                {/* El color del texto dura lo mismo que el desplazamiento de la píldora (Flip 0.6 s)
+                    para que no quede azul sobre azul ni blanco sobre crema a mitad de camino */}
+                <span
+                  className={`relative z-10 transition-colors duration-[600ms] ease-in-out ${
+                    activo ? "text-white" : "text-azul"
+                  }`}
+                >
+                  {opcion.texto}
+                </span>
               </button>
             );
           })}
         </div>
 
-        <ul data-rejilla-sucursales className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ul ref={rejilla} data-rejilla-sucursales className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {SUCURSALES.map((sucursal) => {
             const abierta = estados[sucursal.id];
             return (
