@@ -16,6 +16,8 @@ export interface Sucursal {
   id: string;
   nombre: string;
   formato: FormatoSucursal;
+  /** Otros formatos en los que también aparece al filtrar (p. ej. un Sigo + que es bodegón) */
+  formatosAdicionales?: FormatoSucursal[];
   ubicacion: string;
   zona: string;
   /** CID de la ficha de Google Maps; si no existe se usa una búsqueda */
@@ -28,6 +30,11 @@ export interface Sucursal {
   servicios: string[];
   destacado?: string;
   foto?: FotoSucursal;
+}
+
+/** Indica si la sucursal debe mostrarse con el filtro de formato indicado */
+export function perteneceAFormato(sucursal: Sucursal, formato: FormatoSucursal): boolean {
+  return sucursal.formato === formato || (sucursal.formatosAdicionales?.includes(formato) ?? false);
 }
 
 export const ETIQUETAS_FORMATO: Record<FormatoSucursal, string> = {
@@ -99,6 +106,7 @@ export const SUCURSALES: readonly Sucursal[] = [
     id: "sigo-mas-2",
     nombre: "Sigo +2 Bodegón Costazul",
     formato: "sigo-mas",
+    formatosAdicionales: ["bodegon"],
     ubicacion: "C.C. Parque Costazul",
     zona: "Pampatar · Maneiro",
     consultaMapa: "Sigo Bodegón Costazul Margarita",

@@ -8,6 +8,7 @@ import {
   ETIQUETAS_FORMATO,
   crearEnlaceMapa,
   estaAbierta,
+  perteneceAFormato,
   type FormatoSucursal,
 } from "@/datos/sucursales";
 import { WHATSAPP_ATENCION, crearEnlaceWhatsApp } from "@/datos/contacto";
@@ -253,7 +254,7 @@ export function Sucursales() {
               <li
                 key={sucursal.id}
                 data-sucursal={sucursal.id}
-                style={{ display: filtro !== "todas" && sucursal.formato !== filtro ? "none" : undefined }}
+                style={{ display: filtro !== "todas" && !perteneceAFormato(sucursal, filtro) ? "none" : undefined }}
                 className="group flex flex-col overflow-hidden rounded-[1.75rem] bg-crema ring-1 ring-azul/5 transition-shadow hover:shadow-xl hover:shadow-azul/10"
               >
                 {sucursal.foto && (
@@ -272,8 +273,12 @@ export function Sucursales() {
                 )}
                 <div className="flex flex-1 flex-col p-6">
                   <div className="flex items-start justify-between gap-3">
-                    <span className={`rounded-full px-3 py-1 text-xs font-extrabold ${ESTILO_FORMATO[sucursal.formato]}`}>
-                      {ETIQUETAS_FORMATO[sucursal.formato]}
+                    <span className="flex flex-wrap gap-1.5">
+                      {[sucursal.formato, ...(sucursal.formatosAdicionales ?? [])].map((formato) => (
+                        <span key={formato} className={`rounded-full px-3 py-1 text-xs font-extrabold ${ESTILO_FORMATO[formato]}`}>
+                          {ETIQUETAS_FORMATO[formato]}
+                        </span>
+                      ))}
                     </span>
                     {abierta !== undefined && abierta !== null ? (
                       <span
