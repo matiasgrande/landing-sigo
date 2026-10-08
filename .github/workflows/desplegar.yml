@@ -1,0 +1,43 @@
+name: Desplegar en GitHub Pages
+
+on:
+  push:
+    branches: [main, claude/propuesta-landing]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: despliegue-pages
+  cancel-in-progress: true
+
+jobs:
+  construir-y-desplegar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Verificar tipos
+        run: npm run lint
+
+      - name: Construir sitio estático
+        run: npm run build
+        env:
+          NEXT_PUBLIC_RUTA_BASE: /landing-sigo
+
+      - name: Publicar en la rama gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./out
+          publish_branch: gh-pages
+          force_orphan: true
