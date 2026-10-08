@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
-import { gsap, useGSAP, Flip, ScrollTrigger, CON_MOVIMIENTO, ESCRITORIO_CON_MOVIMIENTO } from "@/lib/gsap";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { gsap, useGSAP, ScrollTrigger, CON_MOVIMIENTO, ESCRITORIO_CON_MOVIMIENTO } from "@/lib/gsap";
 import {
   SUCURSALES,
   ETIQUETAS_FORMATO,
@@ -46,58 +46,93 @@ function useEstadosApertura(): Record<string, boolean | null> {
 export function Sucursales() {
   const [filtro, setFiltro] = useState<Filtro>("todas");
   const seccion = useRef<HTMLElement>(null);
-  const estadoFlip = useRef<Flip.FlipState | null>(null);
   const rejilla = useRef<HTMLUListElement>(null);
+  const grupoFiltros = useRef<HTMLDivElement>(null);
+  const pildora = useRef<HTMLSpanElement>(null);
   const altoAnterior = useRef<number | null>(null);
+  const [pildoraLista, setPildoraLista] = useState(false);
   const estados = useEstadosApertura();
 
-  // Guarda posiciones antes del cambio para animarlas con Flip después del render
   function cambiarFiltro(nuevo: Filtro) {
     if (nuevo === filtro) return;
-    if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      estadoFlip.current = Flip.getState("[data-sucursal], [data-flip-id='filtro-activo']");
-      altoAnterior.current = rejilla.current?.offsetHeight ?? null;
-    }
+    // Alto actual (aunque esté a mitad de una animación) para continuar desde ahí
+    altoAnterior.current = rejilla.current?.offsetHeight ?? null;
     setFiltro(nuevo);
   }
 
+  /** Coloca la píldora bajo el filtro activo; con animación se puede interrumpir sin deformarse */
+  const moverPildora = useCallback((animar: boolean) => {
+    const grupo = grupoFiltros.current;
+    const indicador = pildora.current;
+    const boton = grupo?.querySelector<HTMLButtonElement>("button[aria-pressed='true']");
+    if (!grupo || !indicador || !boton) return;
+    const destino = { x: boton.offsetLeft, width: boton.offsetWidth, height: boton.offsetHeight, y: boton.offsetTop };
+    if (animar) gsap.to(indicador, { ...destino, duration: 0.4, ease: "power3.out", overwrite: true });
+    else gsap.set(indicador, { ...destino, overwrite: true });
+  }, []);
+
+  // Posición inicial de la píldora y reajuste si cambian las medidas (fuente, ancho de ventana)
+  useEffect(() => {
+    const grupo = grupoFiltros.current;
+    if (!grupo) return;
+    moverPildora(false);
+    setPildoraLista(true);
+    const observador = new ResizeObserver(() => moverPildora(false));
+    observador.observe(grupo);
+    grupo.querySelectorAll("button").forEach((boton) => observador.observe(boton));
+    return () => observador.disconnect();
+  }, [moverPildora]);
+
   useGSAP(
     () => {
-      const estado = estadoFlip.current;
-      estadoFlip.current = null;
-      // El filtro cambia la altura de la sección: sin recalcular, los ScrollTrigger de
-      // las secciones siguientes quedan desfasados y su contenido no aparece
-      if (!estado) {
-        ScrollTrigger.refresh();
-        return;
-      }
-      // Flip saca las tarjetas del flujo (absolute) y la rejilla colapsaría a 0 px,
-      // haciendo saltar todo lo de abajo: se fija su alto y se anima al nuevo
       const lista = rejilla.current;
       const altoInicial = altoAnterior.current;
       altoAnterior.current = null;
-      if (lista && altoInicial !== null) {
-        gsap.killTweensOf(lista);
-        gsap.set(lista, { clearProps: "height" });
-        const altoFinal = lista.offsetHeight;
-        gsap.fromTo(
-          lista,
-          { height: altoInicial },
-          { height: altoFinal, duration: 0.6, ease: "power2.inOut", clearProps: "height" },
-        );
+      if (!lista || altoInicial === null) return;
+      const sinMovimiento = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      moverPildora(!sinMovimiento);
+
+      // Cada cambio cancela la animación anterior en lugar de apilarse (clics rápidos)
+      const visibles = gsap.utils
+        .toArray<HTMLElement>("[data-sucursal]", lista)
+        .filter((tarjeta) => tarjeta.style.display !== "none");
+      gsap.killTweensOf([lista, ...visibles]);
+      gsap.set(lista, { clearProps: "height,overflow" });
+
+      // El filtro cambia la altura de la sección: hay que recalcular los ScrollTrigger
+      // de las secciones siguientes o su contenido queda oculto (pantalla en blanco)
+      if (sinMovimiento) {
+        gsap.set(visibles, { clearProps: "opacity,visibility,transform" });
+        ScrollTrigger.refresh();
+        return;
       }
-      Flip.from(estado, {
-        targets: "[data-sucursal], [data-flip-id='filtro-activo']",
-        duration: 0.6,
-        ease: "power2.inOut",
-        absolute: true,
-        nested: true,
-        onEnter: (elementos) =>
-          gsap.fromTo(elementos, { autoAlpha: 0, scale: 0.9 }, { autoAlpha: 1, scale: 1, duration: 0.5, delay: 0.1 }),
-        onLeave: (elementos) => gsap.to(elementos, { autoAlpha: 0, scale: 0.9, duration: 0.3 }),
-        onComplete: () => ScrollTrigger.refresh(),
-        onInterrupt: () => ScrollTrigger.refresh(),
-      });
+
+      // La rejilla pasa de su alto anterior al nuevo para que lo de abajo se desplace sin saltos
+      const altoFinal = lista.offsetHeight;
+      gsap.fromTo(
+        lista,
+        { height: altoInicial, overflow: "clip" },
+        {
+          height: altoFinal,
+          duration: 0.45,
+          ease: "power2.inOut",
+          clearProps: "height,overflow",
+          onComplete: () => ScrollTrigger.refresh(),
+        },
+      );
+      gsap.fromTo(
+        visibles,
+        { autoAlpha: 0, y: 24 },
+        {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.45,
+          stagger: 0.05,
+          ease: "power3.out",
+          overwrite: true,
+          clearProps: "opacity,visibility,transform",
+        },
+      );
     },
     { dependencies: [filtro], scope: seccion },
   );
@@ -178,10 +213,17 @@ export function Sucursales() {
         </figure>
 
         <div
+          ref={grupoFiltros}
           role="group"
           aria-label="Filtrar tiendas por formato"
-          className="sin-barra -mx-5 mt-10 flex gap-2 overflow-x-auto px-5 lg:mx-0 lg:px-0"
+          className="sin-barra relative -mx-5 mt-10 flex gap-2 overflow-x-auto px-5 lg:mx-0 lg:px-0"
         >
+          {/* Indicador único que se desliza entre filtros (se posiciona con GSAP) */}
+          <span
+            ref={pildora}
+            aria-hidden
+            className={`pointer-events-none absolute left-0 top-0 z-[1] rounded-full bg-azul ${pildoraLista ? "" : "invisible"}`}
+          />
           {FILTROS.map((opcion) => {
             const activo = filtro === opcion.valor;
             return (
@@ -190,17 +232,12 @@ export function Sucursales() {
                 type="button"
                 onClick={() => cambiarFiltro(opcion.valor)}
                 aria-pressed={activo}
-                className={`relative shrink-0 rounded-full px-5 py-2.5 text-sm font-extrabold transition-colors ${
-                  activo ? "" : "bg-crema hover:bg-azul-100"
+                className={`relative shrink-0 rounded-full px-5 py-2.5 text-sm font-extrabold transition-colors duration-300 ${
+                  activo ? (pildoraLista ? "" : "bg-azul") : "bg-crema hover:bg-azul-100"
                 }`}
               >
-                {activo && <span data-flip-id="filtro-activo" className="absolute inset-0 rounded-full bg-azul" />}
-                {/* El color del texto dura lo mismo que el desplazamiento de la píldora (Flip 0.6 s)
-                    para que no quede azul sobre azul ni blanco sobre crema a mitad de camino */}
                 <span
-                  className={`relative z-10 transition-colors duration-[600ms] ease-in-out ${
-                    activo ? "text-white" : "text-azul"
-                  }`}
+                  className={`relative z-10 transition-colors duration-300 ${activo ? "text-white" : "text-azul"}`}
                 >
                   {opcion.texto}
                 </span>
