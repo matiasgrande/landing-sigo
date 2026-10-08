@@ -87,7 +87,7 @@ export function Sonrisa({ className, retraso = 0.4 }: { className?: string; retr
 
   return (
     <svg viewBox="0 0 200 30" className={className} aria-hidden fill="none">
-      <path ref={trazo} d="M6 6 Q100 46 194 6" stroke="currentColor" strokeWidth="9" strokeLinecap="round" />
+      <path ref={trazo} d="M6 6 Q100 46 194 6" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
     </svg>
   );
 }

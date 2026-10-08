@@ -160,10 +160,10 @@ export function Hero() {
             ))}
             <span data-hero="anio" className="relative block text-sol">
               desde 1972
-              <Sonrisa retraso={1} className="absolute -bottom-[0.38em] left-0 w-[min(75%,22rem)] text-verde-vivo" />
+              <Sonrisa retraso={1} className="pointer-events-none absolute left-[0.04em] top-full mt-[0.04em] w-[min(70%,20rem)] text-verde-vivo" />
             </span>
           </h1>
-          <p data-hero="texto" className="mt-10 max-w-xl text-pretty text-lg text-white/85 sm:text-xl">
+          <p data-hero="texto" className="mt-16 max-w-xl sm:mt-20 text-pretty text-lg text-white/85 sm:text-xl">
             El supermercado de la familia margariteña. Ocho tiendas, delivery a toda la isla y ahora tu mercado a
             un mensaje de distancia.
           </p>
