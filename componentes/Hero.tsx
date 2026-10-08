@@ -1,7 +1,14 @@
 "use client";
 
 import { useRef } from "react";
-import { gsap, useGSAP, CON_MOVIMIENTO, SIN_MOVIMIENTO } from "@/lib/gsap";
+import {
+  gsap,
+  useGSAP,
+  pausarFueraDeVista,
+  CON_MOVIMIENTO,
+  SIN_MOVIMIENTO,
+  ESCRITORIO_CON_MOVIMIENTO,
+} from "@/lib/gsap";
 import { URL_ECOMMERCE, calcularAniosTrayectoria } from "@/datos/contacto";
 import { Sonrisa } from "@/componentes/Revelar";
 import { IconoCarrito, IconoChat, IconoUbicacion } from "@/componentes/Iconos";
@@ -104,13 +111,17 @@ export function Hero() {
             2.5,
           );
 
-        // Flotación continua de la tarjeta
-        gsap.to("[data-hero-flotar]", { y: -10, duration: 3, ease: "sine.inOut", repeat: -1, yoyo: true });
+      });
 
-        // Olas en bucle
-        gsap.to("[data-hero-ola]", { x: -1440, duration: 18, ease: "none", repeat: -1 });
+      // Bucles y parallax solo en pantallas grandes: en móvil cuestan más de lo que aportan
+      mm.add(ESCRITORIO_CON_MOVIMIENTO, () => {
+        // Olas en bucle: se mueve el <svg> completo (capa compuesta), no el path
+        const olas = gsap.to("[data-hero-ola]", { xPercent: -50, duration: 18, ease: "none", repeat: -1 });
+        pausarFueraDeVista(olas, seccion.current);
 
-        // Parallax ligado al scroll
+        const flotar = gsap.to("[data-hero-flotar]", { y: -10, duration: 3, ease: "sine.inOut", repeat: -1, yoyo: true });
+        pausarFueraDeVista(flotar, seccion.current);
+
         const alScroll = { trigger: seccion.current, start: "top top", end: "bottom top", scrub: true };
         gsap.to("[data-hero-contenido]", { yPercent: 35, ease: "none", scrollTrigger: alScroll });
         gsap.to("[data-hero-contenido]", {
@@ -134,11 +145,11 @@ export function Hero() {
       {/* Sol y brillo de fondo: guiño a la isla */}
       <div
         data-hero-sol
-        className="absolute -right-28 -top-28 -z-10 h-64 w-64 rounded-full bg-sol/90 blur-[2px] sm:-right-24 sm:-top-24 sm:h-[26rem] sm:w-[26rem] lg:-right-10 lg:h-[36rem] lg:w-[36rem]"
+        className="absolute -right-28 -top-28 -z-10 h-64 w-64 rounded-full bg-sol/90 sm:-right-24 sm:-top-24 sm:h-[26rem] sm:w-[26rem] lg:-right-10 lg:h-[36rem] lg:w-[36rem]"
         aria-hidden
       />
       <div
-        className="absolute -left-40 top-1/3 -z-10 h-[30rem] w-[30rem] rounded-full bg-verde-vivo/25 blur-3xl"
+        className="absolute -left-40 top-1/3 -z-10 h-[30rem] w-[30rem] rounded-full bg-[radial-gradient(closest-side,rgb(0_168_7/0.28),transparent)]"
         aria-hidden
       />
 
@@ -146,7 +157,7 @@ export function Hero() {
         <div data-hero-contenido className="min-w-0">
           <p
             data-hero="insignia"
-            className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-bold backdrop-blur"
+            className="mb-6 inline-flex items-center gap-2 rounded-full bg-white/10 px-4 py-2 text-sm font-bold"
           >
             <IconoUbicacion className="h-4 w-4 text-sol" />
             Isla de Margarita · {anios} años contigo
@@ -192,13 +203,13 @@ export function Hero() {
 
       {/* Olas animadas en la base del hero */}
       <svg
-        className="absolute inset-x-0 bottom-0 -z-0 h-20 w-[200%] text-crema sm:h-28"
+        data-hero-ola
+        className="absolute bottom-0 left-0 -z-0 h-20 w-[200%] text-crema sm:h-28"
         viewBox="0 0 2880 120"
         preserveAspectRatio="none"
         aria-hidden
       >
         <path
-          data-hero-ola
           fill="currentColor"
           d="M0 60 C240 120 480 0 720 60 S1200 120 1440 60 S1920 0 2160 60 S2640 120 2880 60 V120 H0Z"
         />

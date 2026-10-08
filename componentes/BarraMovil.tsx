@@ -48,7 +48,7 @@ export function BarraMovil() {
       <nav
         data-barra
         aria-label="Accesos rápidos"
-        className="invisible fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 rounded-3xl bg-white/95 p-1.5 shadow-2xl shadow-azul/25 ring-1 ring-azul/10 backdrop-blur-md lg:hidden"
+        className="invisible fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 rounded-3xl bg-white p-1.5 shadow-xl shadow-azul/20 ring-1 ring-azul/10 lg:hidden"
         style={{ marginBottom: "env(safe-area-inset-bottom)" }}
       >
         {[

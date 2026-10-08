@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { gsap, useGSAP, Flip, CON_MOVIMIENTO } from "@/lib/gsap";
+import { gsap, useGSAP, Flip, CON_MOVIMIENTO, ESCRITORIO_CON_MOVIMIENTO } from "@/lib/gsap";
 import {
   SUCURSALES,
   ETIQUETAS_FORMATO,
@@ -80,7 +80,7 @@ export function Sucursales() {
   useGSAP(
     () => {
       const mm = gsap.matchMedia();
-      mm.add(CON_MOVIMIENTO, () => {
+      mm.add(ESCRITORIO_CON_MOVIMIENTO, () => {
         // Foto principal: se abre con clip-path y hace parallax mientras pasa
         gsap.fromTo(
           "[data-foto-principal]",
@@ -101,6 +101,9 @@ export function Sucursales() {
             scrollTrigger: { trigger: "[data-foto-principal]", start: "top bottom", end: "bottom top", scrub: true },
           },
         );
+      });
+
+      mm.add(CON_MOVIMIENTO, () => {
         // Entrada escalonada de las tarjetas
         gsap.from("[data-sucursal]", {
           autoAlpha: 0,

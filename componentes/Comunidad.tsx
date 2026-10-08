@@ -1,7 +1,13 @@
 "use client";
 
 import { useRef } from "react";
-import { gsap, useGSAP, ScrollTrigger, CON_MOVIMIENTO } from "@/lib/gsap";
+import {
+  gsap,
+  useGSAP,
+  ScrollTrigger,
+  pausarFueraDeVista,
+  ESCRITORIO_CON_MOVIMIENTO,
+} from "@/lib/gsap";
 import { TituloSeccion, Revelar } from "@/componentes/Revelar";
 import { IconoTrofeo, IconoCorazon, IconoGlobo } from "@/componentes/Iconos";
 
@@ -45,15 +51,19 @@ export function Comunidad() {
   useGSAP(
     () => {
       const mm = gsap.matchMedia();
-      mm.add(CON_MOVIMIENTO, () => {
+      mm.add(ESCRITORIO_CON_MOVIMIENTO, () => {
         // Marquesina infinita; el scroll la acelera momentáneamente
         const marquesina = gsap.to("[data-marquesina]", { xPercent: -50, duration: 40, ease: "none", repeat: -1 });
+        pausarFueraDeVista(marquesina, document.querySelector("[data-marquesina]"));
+
         ScrollTrigger.create({
           trigger: seccion.current,
           start: "top bottom",
           end: "bottom top",
           onUpdate: (instancia) => {
-            const impulso = gsap.utils.clamp(1, 6, 1 + Math.abs(instancia.getVelocity()) / 300);
+            const velocidad = Math.abs(instancia.getVelocity());
+            if (velocidad < 200) return;
+            const impulso = gsap.utils.clamp(1, 6, 1 + velocidad / 300);
             gsap.to(marquesina, {
               timeScale: impulso,
               duration: 0.2,
@@ -100,13 +110,15 @@ export function Comunidad() {
       {/* Marquesina de marcas aliadas */}
       <div className="mt-20" aria-label="Marcas aliadas">
         <p className="mb-5 text-center text-xs font-extrabold uppercase tracking-[0.2em] text-gris">De la mano de marcas que quieres</p>
-        <div className="relative flex overflow-hidden [mask-image:linear-gradient(90deg,transparent,black_10%,black_90%,transparent)]">
+        <div className="sin-barra relative flex overflow-x-auto px-5 md:overflow-hidden md:px-0 md:[mask-image:linear-gradient(90deg,transparent,black_10%,black_90%,transparent)]">
           <ul data-marquesina className="flex w-max shrink-0 gap-3 pr-3">
             {[...ALIADOS, ...ALIADOS].map((aliado, indice) => (
               <li
                 key={`${aliado}-${indice}`}
                 aria-hidden={indice >= ALIADOS.length}
-                className="whitespace-nowrap rounded-full bg-white px-6 py-3 text-lg font-black text-azul/70 ring-1 ring-azul/10"
+                className={`whitespace-nowrap rounded-full bg-white px-6 py-3 text-lg font-black text-azul/70 ring-1 ring-azul/10 ${
+                  indice >= ALIADOS.length ? "hidden md:block" : ""
+                }`}
               >
                 {aliado}
               </li>

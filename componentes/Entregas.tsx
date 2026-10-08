@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useRef, useState, type ComponentType, type SVGProps } from "react";
-import { gsap, useGSAP, CON_MOVIMIENTO } from "@/lib/gsap";
+import { gsap, useGSAP, CON_MOVIMIENTO, ESCRITORIO_CON_MOVIMIENTO } from "@/lib/gsap";
 import { MODALIDADES_ENTREGA, TARIFAS_MUNICIPIO } from "@/datos/entregas";
 import { formatearBs, formatearUsd } from "@/lib/useTasaBcv";
 import { useTasa } from "@/componentes/ContextoTasa";
@@ -92,14 +92,13 @@ export function Entregas() {
   useGSAP(
     () => {
       const mm = gsap.matchMedia();
-      mm.add(CON_MOVIMIENTO, () => {
+      mm.add(ESCRITORIO_CON_MOVIMIENTO, () => {
         const tarjetas = gsap.utils.toArray<HTMLElement>("[data-tarjeta-entrega]");
         tarjetas.forEach((tarjeta, indice) => {
           const siguiente = tarjetas[indice + 1];
           if (!siguiente) return;
           gsap.to(tarjeta, {
             scale: 0.92,
-            filter: "brightness(0.85)",
             ease: "none",
             scrollTrigger: { trigger: siguiente, start: "top 85%", end: "top 30%", scrub: true },
           });

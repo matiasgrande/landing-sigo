@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { gsap, useGSAP, CON_MOVIMIENTO } from "@/lib/gsap";
+import { gsap, useGSAP, CON_MOVIMIENTO, ESCRITORIO_CON_MOVIMIENTO } from "@/lib/gsap";
 import { URL_ECOMMERCE } from "@/datos/contacto";
 import { TituloSeccion, Revelar } from "@/componentes/Revelar";
 import { IconoGlobo, IconoCorazon, IconoCarrito } from "@/componentes/Iconos";
@@ -41,6 +41,9 @@ export function SigoCreditos() {
           ease: "back.out(1.8)",
           scrollTrigger: { trigger: "[data-lista-pagos]", start: "top 90%", once: true },
         });
+      });
+
+      mm.add(ESCRITORIO_CON_MOVIMIENTO, () => {
         // Sello de Cashea que gira levemente con el scroll
         gsap.fromTo(
           "[data-cashea]",
@@ -52,6 +55,9 @@ export function SigoCreditos() {
             scrollTrigger: { trigger: "[data-cashea]", start: "top bottom", end: "top 40%", scrub: true },
           },
         );
+      });
+
+      mm.add(ESCRITORIO_CON_MOVIMIENTO, () => {
         // Brillo de fondo con parallax
         gsap.to("[data-brillo-creditos]", {
           yPercent: 80,
@@ -65,7 +71,7 @@ export function SigoCreditos() {
 
   return (
     <section id="creditos" ref={seccion} className="relative overflow-hidden bg-verde px-5 py-24 text-white sm:py-32">
-      <div data-brillo-creditos className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-verde-vivo/40 blur-3xl" aria-hidden />
+      <div data-brillo-creditos className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-[radial-gradient(closest-side,rgb(0_168_7/0.55),transparent)]" aria-hidden />
       <div className="relative mx-auto max-w-6xl">
         <TituloSeccion
           claro
@@ -77,7 +83,7 @@ export function SigoCreditos() {
         <ol className="mt-14 grid gap-4 md:grid-cols-3">
           {PASOS.map(({ Icono, titulo, texto }, indice) => (
             <Revelar key={titulo} retraso={indice * 0.12}>
-              <li className="relative h-full rounded-[2rem] bg-white/10 p-7 ring-1 ring-white/15 backdrop-blur">
+              <li className="relative h-full rounded-[2rem] bg-white/10 p-7 ring-1 ring-white/15">
                 <span className="absolute right-6 top-5 text-6xl font-black text-white/10">{indice + 1}</span>
                 <span className="grid h-14 w-14 place-items-center rounded-2xl bg-sol text-azul">
                   <Icono className="h-7 w-7" />

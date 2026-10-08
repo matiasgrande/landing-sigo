@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useRef } from "react";
-import { gsap, useGSAP, CON_MOVIMIENTO } from "@/lib/gsap";
+import { gsap, useGSAP, pausarFueraDeVista, ESCRITORIO_CON_MOVIMIENTO } from "@/lib/gsap";
 import logoSigo from "@/recursos/logo-sigo.png";
 import {
   URL_ECOMMERCE,
@@ -30,8 +30,15 @@ export function Cierre() {
   useGSAP(
     () => {
       const mm = gsap.matchMedia();
-      mm.add(CON_MOVIMIENTO, () => {
-        gsap.to("[data-brillo-cierre]", { scale: 1.15, duration: 4, ease: "sine.inOut", repeat: -1, yoyo: true });
+      mm.add(ESCRITORIO_CON_MOVIMIENTO, () => {
+        const respirar = gsap.to("[data-brillo-cierre]", {
+          scale: 1.15,
+          duration: 4,
+          ease: "sine.inOut",
+          repeat: -1,
+          yoyo: true,
+        });
+        pausarFueraDeVista(respirar, llamado.current);
       });
     },
     { scope: llamado },
@@ -75,7 +82,7 @@ export function Cierre() {
       <section ref={llamado} className="relative overflow-hidden bg-azul px-5 py-24 text-center text-white sm:py-32">
         <div
           data-brillo-cierre
-          className="absolute left-1/2 top-1/2 -z-0 h-[40rem] w-[40rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-sol/15 blur-3xl"
+          className="absolute left-1/2 top-1/2 -z-0 h-[40rem] w-[40rem] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(closest-side,rgb(255_194_26/0.22),transparent)]"
           aria-hidden
         />
         <Revelar className="relative mx-auto max-w-3xl">

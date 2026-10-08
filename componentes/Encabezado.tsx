@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { gsap, useGSAP, ScrollTrigger, CON_MOVIMIENTO } from "@/lib/gsap";
+import { gsap, useGSAP, ScrollTrigger, CON_MOVIMIENTO, ESCRITORIO_CON_MOVIMIENTO } from "@/lib/gsap";
 import logoSigo from "@/recursos/logo-sigo.png";
 import { URL_ECOMMERCE } from "@/datos/contacto";
 import { useTasa } from "@/componentes/ContextoTasa";
@@ -37,11 +37,14 @@ export function Encabezado() {
   // Barra de progreso de lectura y estado "desplazado" de la cabecera
   useGSAP(
     () => {
-      gsap.fromTo(
-        barraProgreso.current,
-        { scaleX: 0 },
-        { scaleX: 1, ease: "none", scrollTrigger: { start: 0, end: "max", scrub: 0.3 } },
-      );
+      const mm = gsap.matchMedia();
+      mm.add(ESCRITORIO_CON_MOVIMIENTO, () => {
+        gsap.fromTo(
+          barraProgreso.current,
+          { scaleX: 0 },
+          { scaleX: 1, ease: "none", scrollTrigger: { start: 0, end: "max", scrub: 0.3 } },
+        );
+      });
       ScrollTrigger.create({
         start: 24,
         end: "max",
@@ -78,13 +81,13 @@ export function Encabezado() {
     <header ref={cabecera} className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5">
       <div
         ref={barraProgreso}
-        className="fixed inset-x-0 top-0 h-1 origin-left bg-gradient-to-r from-verde-vivo to-sol"
+        className="fixed inset-x-0 top-0 hidden h-1 origin-left bg-gradient-to-r from-verde-vivo to-sol md:block"
         aria-hidden
       />
       <nav
         aria-label="Principal"
         className={`mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-full py-2 pl-3 pr-2 transition-all duration-300 sm:pl-4 ${
-          desplazado ? "bg-white/90 shadow-lg shadow-azul/10 backdrop-blur-md" : "bg-white"
+          desplazado ? "bg-white shadow-lg shadow-azul/10" : "bg-white"
         }`}
       >
         <a href="#inicio" className="flex shrink-0 items-center" aria-label="SIGO, ir al inicio">

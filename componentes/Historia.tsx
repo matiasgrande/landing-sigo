@@ -2,7 +2,7 @@
 
 import Image, { type StaticImageData } from "next/image";
 import { useRef } from "react";
-import { gsap, useGSAP, CON_MOVIMIENTO } from "@/lib/gsap";
+import { gsap, useGSAP, CON_MOVIMIENTO, ESCRITORIO_CON_MOVIMIENTO } from "@/lib/gsap";
 import { calcularAniosTrayectoria } from "@/datos/contacto";
 import { TituloSeccion, Revelar } from "@/componentes/Revelar";
 import fotoPorlamar from "@/recursos/fotos/tienda-porlamar-2010.webp";
@@ -31,6 +31,9 @@ export function Historia() {
             scrollTrigger: { trigger: referencia.current, start: "top 75%", end: "bottom 60%", scrub: 0.6 },
           },
         );
+      });
+
+      mm.add(ESCRITORIO_CON_MOVIMIENTO, () => {
         // Foto de archivo: pasa de sepia a color al recorrerla
         gsap.fromTo(
           "[data-foto-hito] img",
