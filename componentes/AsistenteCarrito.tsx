@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { gsap, useGSAP, CON_MOVIMIENTO } from "@/lib/gsap";
 import {
   calcularSubtotal,
   formatearCantidad,
@@ -76,7 +76,48 @@ export function AsistenteCarrito() {
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
   const siguienteId = useRef(1);
   const idCampo = useId();
+  const seccion = useRef<HTMLElement>(null);
+  const idsAnimados = useRef<Set<string>>(new Set());
   const { tasa } = useTasa();
+  const { contextSafe } = useGSAP({ scope: seccion });
+
+  // Entrada de cada mensaje nuevo
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+      mm.add(CON_MOVIMIENTO, () => {
+        const burbujas = gsap.utils.toArray<HTMLElement>("[data-mensaje]");
+        const ultima = burbujas[burbujas.length - 1];
+        if (ultima) gsap.from(ultima, { autoAlpha: 0, y: 12, scale: 0.97, duration: 0.4 });
+      });
+    },
+    { dependencies: [mensajes.length], scope: seccion },
+  );
+
+  // Puntos de "escribiendo..."
+  useGSAP(
+    () => {
+      if (!escribiendo) return;
+      gsap.to("[data-punto]", { y: -4, duration: 0.3, ease: "sine.inOut", repeat: -1, yoyo: true, stagger: 0.12 });
+    },
+    { dependencies: [escribiendo], scope: seccion },
+  );
+
+  // Entrada de productos nuevos en el carrito
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+      const nuevos = gsap.utils
+        .toArray<HTMLElement>("[data-linea-carrito]")
+        .filter((el) => !idsAnimados.current.has(el.dataset.lineaCarrito ?? ""));
+      nuevos.forEach((el) => idsAnimados.current.add(el.dataset.lineaCarrito ?? ""));
+      if (nuevos.length === 0) return;
+      mm.add(CON_MOVIMIENTO, () => {
+        gsap.from(nuevos, { autoAlpha: 0, x: 24, stagger: 0.08, duration: 0.45 });
+      });
+    },
+    { dependencies: [carrito], scope: seccion },
+  );
 
   const total = carrito.reduce((suma, linea) => suma + calcularSubtotal(linea), 0);
   const totalArticulos = carrito.length;
@@ -145,16 +186,29 @@ export function AsistenteCarrito() {
           const paso = linea.producto.unidad === "kg" ? 0.25 : 1;
           return { ...linea, cantidad: Math.round((linea.cantidad + paso * direccion) * 100) / 100 };
         })
-        .filter((linea) => linea.cantidad > 0),
+        .filter((linea) => {
+          if (linea.cantidad > 0) return true;
+          idsAnimados.current.delete(linea.producto.id);
+          return false;
+        }),
     );
   }
 
-  function quitar(idProducto: string) {
-    setCarrito((actual) => actual.filter((linea) => linea.producto.id !== idProducto));
-  }
+  const quitar = contextSafe((idProducto: string) => {
+    const eliminar = () => {
+      idsAnimados.current.delete(idProducto);
+      setCarrito((actual) => actual.filter((linea) => linea.producto.id !== idProducto));
+    };
+    const elemento = seccion.current?.querySelector(`[data-linea-carrito="${idProducto}"]`);
+    if (!elemento || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      eliminar();
+      return;
+    }
+    gsap.to(elemento, { autoAlpha: 0, x: -24, duration: 0.25, ease: "power2.in", onComplete: eliminar });
+  });
 
   return (
-    <section id="asistente" className="px-5 py-24 sm:py-32">
+    <section id="asistente" ref={seccion} className="px-5 py-24 sm:py-32">
       <div className="mx-auto max-w-6xl">
         <TituloSeccion
           etiqueta="Nuevo · Arma tu lista"
@@ -186,12 +240,10 @@ export function AsistenteCarrito() {
               aria-live="polite"
               aria-label="Conversación con el asistente"
             >
-              <AnimatePresence initial={false}>
-                {mensajes.map((mensaje) => (
-                  <motion.p
+              {mensajes.map((mensaje) => (
+                  <p
                     key={mensaje.id}
-                    initial={{ opacity: 0, y: 12, scale: 0.97 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    data-mensaje
                     className={`w-fit max-w-[88%] whitespace-pre-line rounded-2xl px-4 py-3 text-[0.95rem] leading-snug ${
                       mensaje.autor === "usuario"
                         ? "ml-auto rounded-br-sm bg-azul font-semibold text-white"
@@ -199,28 +251,18 @@ export function AsistenteCarrito() {
                     }`}
                   >
                     {mensaje.texto}
-                  </motion.p>
+                  </p>
                 ))}
                 {escribiendo && (
-                  <motion.p
-                    key="escribiendo"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
+                  <p
                     className="flex w-fit gap-1 rounded-2xl rounded-bl-sm bg-crema px-4 py-4"
                     aria-label="El asistente está escribiendo"
                   >
                     {[0, 1, 2].map((punto) => (
-                      <motion.span
-                        key={punto}
-                        className="h-2 w-2 rounded-full bg-gris"
-                        animate={{ y: [0, -4, 0] }}
-                        transition={{ duration: 0.6, repeat: Infinity, delay: punto * 0.12 }}
-                      />
+                      <span key={punto} data-punto className="h-2 w-2 rounded-full bg-gris" />
                     ))}
-                  </motion.p>
+                  </p>
                 )}
-              </AnimatePresence>
             </div>
 
             <div className="sin-barra flex gap-2 overflow-x-auto px-4 pb-3">
@@ -280,14 +322,10 @@ export function AsistenteCarrito() {
                 </div>
               ) : (
                 <ul className="space-y-2">
-                  <AnimatePresence initial={false}>
                     {carrito.map((linea) => (
-                      <motion.li
+                      <li
                         key={linea.producto.id}
-                        layout
-                        initial={{ opacity: 0, x: 20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -20 }}
+                        data-linea-carrito={linea.producto.id}
                         className="flex items-center gap-3 rounded-2xl bg-white/[0.07] p-3"
                       >
                         <div className="min-w-0 flex-1">
@@ -326,9 +364,8 @@ export function AsistenteCarrito() {
                         >
                           <IconoCerrar className="h-4 w-4" />
                         </button>
-                      </motion.li>
+                      </li>
                     ))}
-                  </AnimatePresence>
                 </ul>
               )}
             </div>

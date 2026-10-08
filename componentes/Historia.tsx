@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef } from "react";
-import { motion, useScroll, useSpring } from "motion/react";
+import { gsap, useGSAP, CON_MOVIMIENTO } from "@/lib/gsap";
 import { calcularAniosTrayectoria } from "@/datos/contacto";
 import { TituloSeccion, Revelar } from "@/componentes/Revelar";
 
@@ -13,8 +13,34 @@ interface Hito {
 
 export function Historia() {
   const referencia = useRef<HTMLOListElement>(null);
-  const { scrollYProgress } = useScroll({ target: referencia, offset: ["start 75%", "end 60%"] });
-  const progreso = useSpring(scrollYProgress, { stiffness: 100, damping: 30 });
+
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+      mm.add(CON_MOVIMIENTO, () => {
+        // La línea se dibuja a medida que bajas
+        gsap.fromTo(
+          "[data-linea-progreso]",
+          { scaleY: 0 },
+          {
+            scaleY: 1,
+            ease: "none",
+            scrollTrigger: { trigger: referencia.current, start: "top 75%", end: "bottom 60%", scrub: 0.6 },
+          },
+        );
+        // Cada punto "se enciende" al alcanzarlo
+        gsap.utils.toArray<HTMLElement>("[data-punto-hito]").forEach((punto) => {
+          gsap.from(punto, {
+            scale: 0,
+            duration: 0.5,
+            ease: "back.out(3)",
+            scrollTrigger: { trigger: punto, start: "top 70%", once: true },
+          });
+        });
+      });
+    },
+    { scope: referencia },
+  );
   const anios = calcularAniosTrayectoria();
 
   const hitos: Hito[] = [
@@ -67,8 +93,8 @@ export function Historia() {
         <ol ref={referencia} className="relative mt-16 space-y-12 pl-10 sm:space-y-16 md:pl-0">
           {/* Línea de tiempo que se dibuja con el scroll */}
           <div className="absolute bottom-0 left-[0.6rem] top-0 w-1 rounded-full bg-azul-100 md:left-1/2 md:-translate-x-1/2" aria-hidden />
-          <motion.div
-            style={{ scaleY: progreso }}
+          <div
+            data-linea-progreso
             className="absolute bottom-0 left-[0.6rem] top-0 w-1 origin-top rounded-full bg-gradient-to-b from-verde-vivo to-azul md:left-1/2 md:-translate-x-1/2"
             aria-hidden
           />
@@ -78,6 +104,7 @@ export function Historia() {
             return (
               <li key={hito.titulo} className="relative md:grid md:grid-cols-2 md:gap-16">
                 <span
+                  data-punto-hito
                   className="absolute -left-10 top-2 grid h-6 w-6 place-items-center rounded-full bg-white ring-4 ring-verde md:left-1/2 md:-translate-x-1/2"
                   aria-hidden
                 >

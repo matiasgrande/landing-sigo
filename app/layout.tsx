@@ -74,8 +74,15 @@ const datosEstructurados = {
 
 export default function DisenoRaiz({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="es-VE" className={nunito.variable}>
+    <html lang="es-VE" className={nunito.variable} suppressHydrationWarning>
       <body className="font-sans antialiased">
+        {/* Marca la página como "con JS"; si GSAP no arranca en 4 s, se muestra todo igual */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "document.documentElement.classList.add('js');setTimeout(function(){if(!window.__animacionesListas)document.documentElement.classList.remove('js')},4000);",
+          }}
+        />
         <a
           href="#contenido"
           className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-sol focus:px-5 focus:py-3 focus:font-bold focus:text-azul"

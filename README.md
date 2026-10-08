@@ -9,7 +9,7 @@ Propuesta de landing page institucional para **SIGO Supermercados** (Isla de Mar
 
 - Next.js (App Router, exportación estática) + TypeScript estricto
 - Tailwind CSS v4
-- Motion (animaciones ligadas al scroll)
+- GSAP (ScrollTrigger, Flip y DrawSVG vía `@gsap/react`) para todas las animaciones
 
 ## Secciones
 

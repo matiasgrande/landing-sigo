@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "motion/react";
+import { useRef } from "react";
+import { gsap, useGSAP, CON_MOVIMIENTO } from "@/lib/gsap";
 import { URL_ECOMMERCE } from "@/datos/contacto";
 import { TituloSeccion, Revelar } from "@/componentes/Revelar";
 import { IconoGlobo, IconoCorazon, IconoCarrito } from "@/componentes/Iconos";
@@ -22,9 +23,36 @@ const PAGOS = [
 ];
 
 export function SigoCreditos() {
+  const seccion = useRef<HTMLElement>(null);
+
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+      mm.add(CON_MOVIMIENTO, () => {
+        // Medios de pago: aparecen en cascada con rebote
+        gsap.from("[data-pago]", {
+          autoAlpha: 0,
+          y: 14,
+          scale: 0.9,
+          stagger: 0.06,
+          duration: 0.5,
+          ease: "back.out(1.8)",
+          scrollTrigger: { trigger: "[data-lista-pagos]", start: "top 90%", once: true },
+        });
+        // Brillo de fondo con parallax
+        gsap.to("[data-brillo-creditos]", {
+          yPercent: 80,
+          ease: "none",
+          scrollTrigger: { trigger: seccion.current, start: "top bottom", end: "bottom top", scrub: true },
+        });
+      });
+    },
+    { scope: seccion },
+  );
+
   return (
-    <section id="creditos" className="relative overflow-hidden bg-verde px-5 py-24 text-white sm:py-32">
-      <div className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-verde-vivo/40 blur-3xl" aria-hidden />
+    <section id="creditos" ref={seccion} className="relative overflow-hidden bg-verde px-5 py-24 text-white sm:py-32">
+      <div data-brillo-creditos className="absolute -right-32 -top-32 h-96 w-96 rounded-full bg-verde-vivo/40 blur-3xl" aria-hidden />
       <div className="relative mx-auto max-w-6xl">
         <TituloSeccion
           claro
@@ -63,23 +91,17 @@ export function SigoCreditos() {
           <Revelar>
             <h3 className="text-2xl font-black sm:text-3xl">Pagas como te quede más cómodo</h3>
           </Revelar>
-          <motion.ul
-            className="mt-6 flex flex-wrap gap-2 sm:gap-3"
-            initial="oculto"
-            whileInView="visible"
-            viewport={{ once: true, margin: "-10%" }}
-            variants={{ visible: { transition: { staggerChildren: 0.06 } } }}
-          >
+          <ul data-lista-pagos className="mt-6 flex flex-wrap gap-2 sm:gap-3">
             {PAGOS.map((pago) => (
-              <motion.li
+              <li
                 key={pago}
-                variants={{ oculto: { opacity: 0, y: 14, scale: 0.9 }, visible: { opacity: 1, y: 0, scale: 1 } }}
+                data-pago
                 className="rounded-full bg-white px-5 py-3 font-extrabold text-azul shadow-lg shadow-verde/30"
               >
                 {pago}
-              </motion.li>
+              </li>
             ))}
-          </motion.ul>
+          </ul>
         </div>
       </div>
     </section>

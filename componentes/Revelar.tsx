@@ -1,7 +1,7 @@
 "use client";
 
-import { motion } from "motion/react";
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
+import { gsap, useGSAP, CON_MOVIMIENTO } from "@/lib/gsap";
 
 interface PropsRevelar {
   children: ReactNode;
@@ -12,16 +12,27 @@ interface PropsRevelar {
 
 /** Aparece con fade + desplazamiento al entrar en el viewport */
 export function Revelar({ children, retraso = 0, className, desplazamiento = 32 }: PropsRevelar) {
+  const referencia = useRef<HTMLDivElement>(null);
+
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+      mm.add(CON_MOVIMIENTO, () => {
+        gsap.from(referencia.current, {
+          autoAlpha: 0,
+          y: desplazamiento,
+          delay: retraso,
+          scrollTrigger: { trigger: referencia.current, start: "top 88%", once: true },
+        });
+      });
+    },
+    { scope: referencia },
+  );
+
   return (
-    <motion.div
-      className={className}
-      initial={{ opacity: 0, y: desplazamiento }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "0px 0px -12% 0px" }}
-      transition={{ duration: 0.7, delay: retraso, ease: [0.22, 1, 0.36, 1] }}
-    >
+    <div ref={referencia} className={className}>
       {children}
-    </motion.div>
+    </div>
   );
 }
 
@@ -57,20 +68,26 @@ export function TituloSeccion({ etiqueta, titulo, descripcion, claro = false, ce
   );
 }
 
-/** Curva de la sonrisa del logo, usada como subrayado de marca */
-export function Sonrisa({ className }: { className?: string }) {
+/** Curva de la sonrisa del logo; se dibuja con DrawSVG */
+export function Sonrisa({ className, retraso = 0.4 }: { className?: string; retraso?: number }) {
+  const trazo = useRef<SVGPathElement>(null);
+
+  useGSAP(() => {
+    const mm = gsap.matchMedia();
+    mm.add(CON_MOVIMIENTO, () => {
+      gsap.from(trazo.current, {
+        drawSVG: "0%",
+        duration: 1,
+        delay: retraso,
+        ease: "power2.inOut",
+        scrollTrigger: { trigger: trazo.current, start: "top 95%", once: true },
+      });
+    });
+  });
+
   return (
     <svg viewBox="0 0 200 30" className={className} aria-hidden fill="none">
-      <motion.path
-        d="M6 6 Q100 46 194 6"
-        stroke="currentColor"
-        strokeWidth="9"
-        strokeLinecap="round"
-        initial={{ pathLength: 0 }}
-        whileInView={{ pathLength: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 1, delay: 0.4, ease: "easeInOut" }}
-      />
+      <path ref={trazo} d="M6 6 Q100 46 194 6" stroke="currentColor" strokeWidth="9" strokeLinecap="round" />
     </svg>
   );
 }

@@ -16,18 +16,6 @@
   --color-coral: #ff6b4a;
 
   --font-sans: var(--fuente-nunito), ui-sans-serif, system-ui, sans-serif;
-
-  --animate-marquesina: marquesina 40s linear infinite;
-  --animate-flotar: flotar 6s ease-in-out infinite;
-
-  @keyframes marquesina {
-    from { transform: translateX(0); }
-    to { transform: translateX(-50%); }
-  }
-  @keyframes flotar {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-  }
 }
 
 :root {
@@ -62,6 +50,11 @@ section[id] {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+}
+
+/* Con JS activo, los elementos de entrada del hero esperan a GSAP (evita parpadeo) */
+.js [data-hero] {
+  visibility: hidden;
 }
 
 /* Oculta la barra de scroll en carruseles horizontales */

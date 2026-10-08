@@ -1,7 +1,7 @@
 "use client";
 
-import { useId, useState, type ComponentType, type SVGProps } from "react";
-import { AnimatePresence, motion } from "motion/react";
+import { useId, useRef, useState, type ComponentType, type SVGProps } from "react";
+import { gsap, useGSAP, CON_MOVIMIENTO } from "@/lib/gsap";
 import { MODALIDADES_ENTREGA, TARIFAS_MUNICIPIO } from "@/datos/entregas";
 import { formatearBs, formatearUsd } from "@/lib/useTasaBcv";
 import { useTasa } from "@/componentes/ContextoTasa";
@@ -22,6 +22,18 @@ function CalculadoraTarifa() {
   const idSelector = useId();
   const { tasa } = useTasa();
   const seleccion = TARIFAS_MUNICIPIO.find((t) => t.municipio === municipio);
+  const resultado = useRef<HTMLDivElement>(null);
+
+  // Cambio de municipio: el precio entra de abajo hacia arriba
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+      mm.add(CON_MOVIMIENTO, () => {
+        gsap.from(resultado.current, { autoAlpha: 0, y: 12, duration: 0.4 });
+      });
+    },
+    { dependencies: [municipio], revertOnUpdate: true },
+  );
 
   return (
     <div className="rounded-[2rem] bg-white p-6 shadow-xl shadow-azul/5 ring-1 ring-azul/5 sm:p-8">
@@ -53,15 +65,8 @@ function CalculadoraTarifa() {
           <path d="m6 9 6 6 6-6" />
         </svg>
       </div>
-      <AnimatePresence mode="wait">
-        {seleccion && (
-          <motion.div
-            key={seleccion.municipio}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="mt-6 flex flex-wrap items-end justify-between gap-4"
-          >
+      {seleccion && (
+          <div ref={resultado} className="mt-6 flex flex-wrap items-end justify-between gap-4">
             <div>
               <p className="text-6xl font-black tracking-tight text-verde">{formatearUsd(seleccion.tarifaUsd)}</p>
               {tasa && <p className="mt-1 text-sm text-gris">{formatearBs(seleccion.tarifaUsd, tasa.valor)}</p>}
@@ -73,17 +78,39 @@ function CalculadoraTarifa() {
             >
               {seleccion.express ? "Express disponible · 2 a 4 h" : "Delivery Especial · salida 3:00 p.m."}
             </p>
-          </motion.div>
+          </div>
         )}
-      </AnimatePresence>
       <p className="mt-6 text-xs text-gris">Tarifas publicadas en sigo.com.ve. Pueden variar sin previo aviso.</p>
     </div>
   );
 }
 
 export function Entregas() {
+  const seccion = useRef<HTMLElement>(null);
+
+  // Cada tarjeta se encoge cuando la siguiente se apila encima
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+      mm.add(CON_MOVIMIENTO, () => {
+        const tarjetas = gsap.utils.toArray<HTMLElement>("[data-tarjeta-entrega]");
+        tarjetas.forEach((tarjeta, indice) => {
+          const siguiente = tarjetas[indice + 1];
+          if (!siguiente) return;
+          gsap.to(tarjeta, {
+            scale: 0.92,
+            filter: "brightness(0.85)",
+            ease: "none",
+            scrollTrigger: { trigger: siguiente, start: "top 85%", end: "top 30%", scrub: true },
+          });
+        });
+      });
+    },
+    { scope: seccion },
+  );
+
   return (
-    <section id="entregas" className="px-5 py-24 sm:py-32">
+    <section id="entregas" ref={seccion} className="px-5 py-24 sm:py-32">
       <div className="mx-auto grid max-w-6xl grid-cols-1 gap-12 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
         <div className="lg:sticky lg:top-28 lg:self-start">
           <TituloSeccion
@@ -113,7 +140,8 @@ export function Entregas() {
               >
                 <Revelar>
                   <article
-                    className={`min-h-64 rounded-[2rem] p-7 shadow-2xl shadow-azul/15 ring-1 ring-azul/5 sm:p-9 ${FONDOS[indice % FONDOS.length]}`}
+                    data-tarjeta-entrega
+                    className={`min-h-64 origin-top rounded-[2rem] p-7 shadow-2xl shadow-azul/15 ring-1 ring-azul/5 sm:p-9 ${FONDOS[indice % FONDOS.length]}`}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white/15 ring-1 ring-current/10">

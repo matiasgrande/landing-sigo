@@ -1,3 +1,7 @@
+"use client";
+
+import { useRef } from "react";
+import { gsap, useGSAP, ScrollTrigger, CON_MOVIMIENTO } from "@/lib/gsap";
 import { TituloSeccion, Revelar } from "@/componentes/Revelar";
 import { IconoTrofeo, IconoCorazon, IconoGlobo } from "@/componentes/Iconos";
 
@@ -36,8 +40,37 @@ const INICIATIVAS = [
 ];
 
 export function Comunidad() {
+  const seccion = useRef<HTMLElement>(null);
+
+  useGSAP(
+    () => {
+      const mm = gsap.matchMedia();
+      mm.add(CON_MOVIMIENTO, () => {
+        // Marquesina infinita; el scroll la acelera momentáneamente
+        const marquesina = gsap.to("[data-marquesina]", { xPercent: -50, duration: 40, ease: "none", repeat: -1 });
+        ScrollTrigger.create({
+          trigger: seccion.current,
+          start: "top bottom",
+          end: "bottom top",
+          onUpdate: (instancia) => {
+            const impulso = gsap.utils.clamp(1, 6, 1 + Math.abs(instancia.getVelocity()) / 300);
+            gsap.to(marquesina, {
+              timeScale: impulso,
+              duration: 0.2,
+              overwrite: true,
+              onComplete: () => {
+                gsap.to(marquesina, { timeScale: 1, duration: 1, delay: 0.2, overwrite: true });
+              },
+            });
+          },
+        });
+      });
+    },
+    { scope: seccion },
+  );
+
   return (
-    <section id="comunidad" className="overflow-hidden px-5 py-24 sm:py-32">
+    <section id="comunidad" ref={seccion} className="overflow-hidden px-5 py-24 sm:py-32">
       <div className="mx-auto max-w-6xl">
         <TituloSeccion
           etiqueta="Comunidad"
@@ -68,7 +101,7 @@ export function Comunidad() {
       <div className="mt-20" aria-label="Marcas aliadas">
         <p className="mb-5 text-center text-xs font-extrabold uppercase tracking-[0.2em] text-gris">De la mano de marcas que quieres</p>
         <div className="relative flex overflow-hidden [mask-image:linear-gradient(90deg,transparent,black_10%,black_90%,transparent)]">
-          <ul className="flex w-max shrink-0 animate-marquesina gap-3 pr-3">
+          <ul data-marquesina className="flex w-max shrink-0 gap-3 pr-3">
             {[...ALIADOS, ...ALIADOS].map((aliado, indice) => (
               <li
                 key={`${aliado}-${indice}`}
