@@ -96,7 +96,7 @@ export function Cierre() {
           <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
             <a
               href={URL_ECOMMERCE}
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-verde-vivo px-8 py-4 text-lg font-extrabold transition hover:-translate-y-0.5"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-verde px-8 py-4 text-lg font-extrabold transition hover:-translate-y-0.5 hover:bg-verde-700"
             >
               <IconoCarrito className="h-5 w-5" /> Ir a la tienda online
             </a>

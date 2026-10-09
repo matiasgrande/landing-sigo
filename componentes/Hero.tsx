@@ -186,7 +186,7 @@ export function Hero() {
           <div data-hero="botones" className="mt-9 flex flex-col gap-3 sm:flex-row">
             <a
               href={URL_ECOMMERCE}
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-verde-vivo px-7 py-4 text-lg font-extrabold shadow-lg shadow-verde/30 transition hover:-translate-y-0.5 hover:bg-verde"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-verde px-7 py-4 text-lg font-extrabold shadow-lg shadow-verde/30 transition hover:-translate-y-0.5 hover:bg-verde-700"
             >
               <IconoCarrito className="h-5 w-5" /> Compra online
             </a>

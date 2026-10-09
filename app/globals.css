@@ -8,12 +8,16 @@
   --color-azul-100: #e6ecf8;
   --color-verde: #007e14;
   --color-verde-vivo: #00a807;
+  /* Hover de botones verdes: más oscuro para mantener el contraste con texto blanco (7,4:1) */
+  --color-verde-700: #006410;
   --color-verde-100: #e3f5e6;
   --color-gris: #666666;
   --color-tinta: #1b2333;
   --color-crema: #f7f8fc;
   --color-sol: #ffc21a;
   --color-coral: #ff6b4a;
+  /* Fondo coral con texto blanco legible (5,2:1) */
+  --color-coral-700: #c43d22;
 
   --font-sans: var(--fuente-nunito), ui-sans-serif, system-ui, sans-serif;
 }

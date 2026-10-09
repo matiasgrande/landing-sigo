@@ -59,7 +59,7 @@ export function TituloSeccion({ etiqueta, titulo, descripcion, claro = false, ce
     <Revelar className={`max-w-2xl ${centrado ? "mx-auto text-center" : ""}`}>
       <p
         className={`mb-3 inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-extrabold uppercase tracking-[0.18em] ${
-          claro ? "bg-white/10 text-sol" : "bg-verde-100 text-verde"
+          claro ? "bg-white text-verde" : "bg-verde-100 text-verde"
         }`}
       >
         {etiqueta}
@@ -72,7 +72,7 @@ export function TituloSeccion({ etiqueta, titulo, descripcion, claro = false, ce
         {titulo}
       </h2>
       {descripcion && (
-        <p className={`mt-4 text-pretty text-lg ${claro ? "text-white/80" : "text-gris"}`}>{descripcion}</p>
+        <p className={`mt-4 text-pretty text-lg ${claro ? "text-white/90" : "text-gris"}`}>{descripcion}</p>
       )}
     </Revelar>
   );

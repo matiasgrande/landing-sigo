@@ -357,12 +357,12 @@ export function AsistenteCarrito() {
                 rows={1}
                 maxLength={MAXIMO_CARACTERES}
                 placeholder="Ej.: 2 harinas pan y café"
-                className="max-h-28 min-h-12 flex-1 resize-none rounded-2xl bg-crema px-4 py-3 text-base outline-none ring-azul/30 placeholder:text-gris/70 focus:ring-2"
+                className="max-h-28 min-h-12 flex-1 resize-none rounded-2xl bg-crema px-4 py-3 text-base outline-none ring-azul/30 placeholder:text-gris focus:ring-2"
               />
               <button
                 type="submit"
                 disabled={!texto.trim() || escribiendo}
-                className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-verde text-white transition hover:bg-verde-vivo disabled:bg-gris/40"
+                className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-verde text-white transition hover:bg-verde-700 disabled:bg-gris/40"
                 aria-label="Enviar lista"
               >
                 <IconoEnviar className="h-5 w-5" />
@@ -457,7 +457,7 @@ export function AsistenteCarrito() {
                   target="_blank"
                   rel="noopener noreferrer"
                   className={`inline-flex items-center justify-center gap-2 rounded-full px-4 py-3 font-extrabold transition ${
-                    carrito.length > 0 ? "bg-verde-vivo hover:bg-verde" : "pointer-events-none bg-white/10 text-white/40"
+                    carrito.length > 0 ? "bg-verde hover:bg-verde-700" : "pointer-events-none bg-white/10 text-white/40"
                   }`}
                 >
                   <IconoWhatsApp className="h-5 w-5" /> Pedir por WhatsApp

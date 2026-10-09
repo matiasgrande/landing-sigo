@@ -33,7 +33,7 @@ const INICIATIVAS = [
     etiqueta: "Promoción",
     titulo: "Aventura Sigo en Margarita",
     texto: "Compras que se convierten en paseos para descubrir la isla junto a nuestras marcas aliadas.",
-    color: "bg-coral text-white",
+    color: "bg-coral-700 text-white",
   },
 ];
 
@@ -104,7 +104,7 @@ export function Comunidad() {
                   <span className="rounded-full bg-black/10 px-3 py-1 text-xs font-extrabold">{etiqueta}</span>
                 </div>
                 <h3 className="mt-10 text-3xl font-black leading-tight">{titulo}</h3>
-                <p className="mt-3 opacity-85">{texto}</p>
+                <p className="mt-3 opacity-90">{texto}</p>
               </article>
             </Revelar>
           ))}

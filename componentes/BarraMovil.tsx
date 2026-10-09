@@ -74,7 +74,7 @@ export function BarraMovil() {
         target="_blank"
         rel="noopener noreferrer"
         aria-label="Escríbenos por WhatsApp"
-        className="invisible fixed bottom-6 right-6 z-40 hidden h-16 w-16 place-items-center rounded-full bg-verde-vivo text-white shadow-2xl shadow-verde/40 transition-[filter] hover:brightness-110 lg:grid"
+        className="invisible fixed bottom-6 right-6 z-40 hidden h-16 w-16 place-items-center rounded-full bg-verde text-white shadow-2xl shadow-verde/40 transition-colors hover:bg-verde-700 lg:grid"
       >
         <IconoWhatsApp className="h-8 w-8" />
       </a>
