@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { gsap, useGSAP, ScrollTrigger, CON_MOVIMIENTO, ESCRITORIO_CON_MOVIMIENTO } from "@/lib/gsap";
 import logoSigo from "@/recursos/logo-sigo.png";
-import { URL_ECOMMERCE } from "@/datos/contacto";
+import { URL_TIENDA } from "@/datos/contacto";
 import { useTasa } from "@/componentes/ContextoTasa";
 import { formatearFechaTasa } from "@/lib/useTasaBcv";
 import { IconoCarrito, IconoCerrar, IconoMenu } from "@/componentes/Iconos";
@@ -154,7 +154,7 @@ export function Encabezado() {
         <div className="flex items-center gap-[8px]">
           <PildoraTasa />
           <a
-            href={URL_ECOMMERCE}
+            href={URL_TIENDA}
             aria-label="Compra online"
             className="inline-flex shrink-0 items-center gap-[8px] rounded-full bg-verde px-[16px] py-[10px] text-sm font-extrabold text-white transition hover:bg-verde-700 sm:px-[20px]"
           >
@@ -214,7 +214,7 @@ export function Encabezado() {
             ))}
           </ul>
           <a
-            href={URL_ECOMMERCE}
+            href={URL_TIENDA}
             className="mt-auto inline-flex items-center justify-center gap-2 rounded-full bg-verde px-6 py-4 text-lg font-extrabold"
           >
             <IconoCarrito className="h-5 w-5" /> Compra online

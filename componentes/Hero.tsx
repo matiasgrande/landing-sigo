@@ -9,7 +9,7 @@ import {
   SIN_MOVIMIENTO,
   ESCRITORIO_CON_MOVIMIENTO,
 } from "@/lib/gsap";
-import { URL_ECOMMERCE, calcularAniosTrayectoria } from "@/datos/contacto";
+import { URL_TIENDA, calcularAniosTrayectoria } from "@/datos/contacto";
 import { Sonrisa } from "@/componentes/Revelar";
 import { formatearUsd } from "@/lib/useTasaBcv";
 import { IconoCarrito, IconoChat, IconoUbicacion } from "@/componentes/Iconos";
@@ -185,7 +185,7 @@ export function Hero() {
           </p>
           <div data-hero="botones" className="mt-9 flex flex-col gap-3 sm:flex-row">
             <a
-              href={URL_ECOMMERCE}
+              href={URL_TIENDA}
               className="inline-flex items-center justify-center gap-2 rounded-full bg-verde px-7 py-4 text-lg font-extrabold shadow-lg shadow-verde/30 transition hover:-translate-y-0.5 hover:bg-verde-700"
             >
               <IconoCarrito className="h-5 w-5" /> Compra online

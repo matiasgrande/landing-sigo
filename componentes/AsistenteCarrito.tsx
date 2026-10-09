@@ -14,7 +14,8 @@ import { formatearBs, formatearFechaTasa, formatearUsd, type TasaBcv } from "@/l
 import { cargarCatalogo } from "@/lib/cargarCatalogo";
 import type { IndiceCatalogo } from "@/lib/indiceCatalogo";
 import { useTasa } from "@/componentes/ContextoTasa";
-import { URL_ECOMMERCE, WHATSAPP_ATENCION, crearEnlaceWhatsApp } from "@/datos/contacto";
+import { URL_TIENDA, WHATSAPP_ATENCION, crearEnlaceWhatsApp } from "@/datos/contacto";
+import { CLAVE_CARRITO } from "@/lib/tienda/comercio";
 import { TituloSeccion, Revelar } from "@/componentes/Revelar";
 import {
   IconoCarrito,
@@ -274,6 +275,25 @@ export function AsistenteCarrito() {
     }
     setMensajes((previos) => [...previos, { id: siguienteId.current++, autor: "asistente", texto: respuesta }]);
     setEscribiendo(false);
+  }
+
+  /** Pasa el carrito armado aquí al prototipo de tienda (se suma a lo que ya hubiera) */
+  function llevarCarritoATienda() {
+    try {
+      const crudo = window.localStorage.getItem(CLAVE_CARRITO);
+      const previo: unknown = crudo ? JSON.parse(crudo) : {};
+      const cantidades: Record<string, number> =
+        typeof previo === "object" && previo !== null ? { ...(previo as Record<string, number>) } : {};
+      for (const linea of carrito) {
+        // Solo productos del catálogo real (IDs numéricos); los de la demostración no existen en la tienda
+        if (!/^\d+$/.test(linea.producto.id)) continue;
+        const actual = typeof cantidades[linea.producto.id] === "number" ? (cantidades[linea.producto.id] ?? 0) : 0;
+        cantidades[linea.producto.id] = Math.min(99, actual + Math.max(1, Math.round(linea.cantidad)));
+      }
+      window.localStorage.setItem(CLAVE_CARRITO, JSON.stringify(cantidades));
+    } catch {
+      // Sin almacenamiento: se abre la tienda igual, con el carrito vacío
+    }
   }
 
   /** Reemplaza un producto del carrito por una de sus alternativas (otra marca o presentación) */
@@ -575,7 +595,8 @@ export function AsistenteCarrito() {
                   <IconoWhatsApp className="h-5 w-5" /> Pedir por WhatsApp
                 </a>
                 <a
-                  href={URL_ECOMMERCE}
+                  href={URL_TIENDA}
+                  onClick={llevarCarritoATienda}
                   className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 py-3 font-extrabold text-azul transition hover:bg-sol"
                 >
                   <IconoCarrito className="h-5 w-5" /> Seguir en la tienda

@@ -12,12 +12,28 @@ const TIENDAS: Record<string, string> = {
 };
 const LIMITE_ESPERA_MS = 15000;
 
-/** Formato compacto generado por scripts/preparar-catalogo-asistente.mjs */
-type FilaProducto = [id: number, nombre: string, precioUsd: number, categoria: number, imagen: string | null, disponible: 0 | 1, enlace: string | null];
+/** Formato compacto (v2) generado por scripts/preparar-catalogo-asistente.mjs */
+type FilaProducto = [
+  id: number,
+  nombre: string,
+  precioUsd: number,
+  categoria: number,
+  imagen: string | null,
+  /** Bits: 1 = disponible en Costazul, 2 = en Sambil */
+  disponibilidad: number,
+  enlace: string | null,
+  precioAnteriorUsd?: number,
+  /** 0 = igual al precio base */
+  precioSambilUsd?: number,
+];
+
+/** [nombre, índice de departamento, grupo intermedio] */
+type FilaCategoria = [nombre: string, departamento: number, grupo: string];
 
 interface CatalogoCompacto {
   extraidoEn: string;
-  categorias: string[];
+  departamentos: string[];
+  categorias: FilaCategoria[];
   productos: FilaProducto[];
 }
 
@@ -26,6 +42,7 @@ function esCatalogoCompacto(datos: unknown): datos is CatalogoCompacto {
   const registro = datos as Record<string, unknown>;
   return (
     typeof registro.extraidoEn === "string" &&
+    Array.isArray(registro.departamentos) &&
     Array.isArray(registro.categorias) &&
     Array.isArray(registro.productos) &&
     registro.productos.length > 0
@@ -48,20 +65,26 @@ function presentacionDe(nombre: string, porKg: boolean): string {
 }
 
 function adaptar(datos: CatalogoCompacto): ProductoCatalogo[] {
-  return datos.productos.map(([id, nombre, precioUsd, categoria, imagen, disponible, enlace]) => {
+  return datos.productos.map(([id, nombre, precioUsd, categoria, imagen, disponibilidad, enlace, precioAnterior, precioSambil]) => {
     const tienda = enlace ? TIENDAS[enlace.charAt(0)] : undefined;
     const porKg = seVendePorKg(nombre);
+    const [nombreCategoria = "", indiceDepartamento = -1, grupo = ""] = datos.categorias[categoria] ?? [];
     return {
       id: String(id),
       nombre,
       presentacion: presentacionDe(nombre, porKg),
       precioUsd,
       unidad: porKg ? "kg" : "unidad",
-      categoria: datos.categorias[categoria] ?? "",
+      categoria: nombreCategoria,
+      departamento: datos.departamentos[indiceDepartamento] ?? "Otros",
+      grupo: grupo || undefined,
       claves: palabrasClave(nombre),
       imagen: imagen ? URL_IMAGENES + imagen : undefined,
       ruta: tienda && enlace ? tienda + enlace.slice(1) : undefined,
-      disponible: disponible === 1,
+      disponible: disponibilidad > 0,
+      disponibleEn: { costazul: (disponibilidad & 1) === 1, sambil: (disponibilidad & 2) === 2 },
+      ...(precioAnterior ? { precioAnteriorUsd: precioAnterior } : {}),
+      ...(precioSambil ? { precioSambilUsd: precioSambil } : {}),
     };
   });
 }

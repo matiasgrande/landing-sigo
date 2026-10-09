@@ -15,6 +15,14 @@ export interface ProductoCatalogo {
   imagen?: string;
   ruta?: string;
   disponible?: boolean;
+  departamento?: string;
+  /** Nivel intermedio del menú (p. ej. "Harinas" para la categoría "Maíz") */
+  grupo?: string;
+  /** Precio antes de la oferta, si la hay */
+  precioAnteriorUsd?: number;
+  /** Precio y disponibilidad por sucursal (el precio base es el de Costazul) */
+  precioSambilUsd?: number;
+  disponibleEn?: { costazul: boolean; sambil: boolean };
 }
 
 export const CATALOGO_DEMO: readonly ProductoCatalogo[] = [

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import logoSigo from "@/recursos/logo-sigo.png";
-import { URL_ECOMMERCE } from "@/datos/contacto";
+import { URL_TIENDA } from "@/datos/contacto";
 
 export const metadata: Metadata = {
   title: "Página no encontrada · SIGO Supermercados",
@@ -24,7 +24,7 @@ export default function NoEncontrada() {
           <Link href="/" className="rounded-full bg-azul px-6 py-3.5 font-extrabold text-white transition hover:bg-azul-700">
             Ir al inicio
           </Link>
-          <a href={URL_ECOMMERCE} className="rounded-full bg-verde px-6 py-3.5 font-extrabold text-white transition hover:bg-verde-700">
+          <a href={URL_TIENDA} className="rounded-full bg-verde px-6 py-3.5 font-extrabold text-white transition hover:bg-verde-700">
             Compra online
           </a>
         </div>

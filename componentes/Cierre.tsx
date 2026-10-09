@@ -6,6 +6,7 @@ import { gsap, useGSAP, pausarFueraDeVista, ESCRITORIO_CON_MOVIMIENTO } from "@/
 import logoSigo from "@/recursos/logo-sigo.png";
 import {
   URL_ECOMMERCE,
+  URL_TIENDA,
   WHATSAPP_ATENCION,
   WHATSAPP_PAGOS,
   CORREOS,
@@ -95,7 +96,7 @@ export function Cierre() {
           </p>
           <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
             <a
-              href={URL_ECOMMERCE}
+              href={URL_TIENDA}
               className="inline-flex items-center justify-center gap-2 rounded-full bg-verde px-8 py-4 text-lg font-extrabold transition hover:-translate-y-0.5 hover:bg-verde-700"
             >
               <IconoCarrito className="h-5 w-5" /> Ir a la tienda online

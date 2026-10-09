@@ -1,5 +1,7 @@
 // Datos de contacto y enlaces oficiales de SIGO
 export const URL_ECOMMERCE = "https://www.sigo.com.ve";
+/** Prototipo del nuevo e-commerce dentro de este mismo sitio (los CTA de compra llevan aquí) */
+export const URL_TIENDA = `${process.env.NEXT_PUBLIC_RUTA_BASE ?? ""}/tienda/`;
 
 export interface CanalWhatsApp {
   etiqueta: string;
