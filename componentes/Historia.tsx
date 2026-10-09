@@ -138,7 +138,7 @@ export function Historia() {
                   className={derecha ? "md:col-start-2" : "md:text-right"}
                   desplazamiento={40}
                 >
-                  <p className="text-[clamp(2rem,12vw,3rem)] font-black tracking-tight text-sol [overflow-wrap:anywhere] sm:text-6xl [-webkit-text-stroke:1.5px_var(--color-azul)]">
+                  <p className="text-[clamp(2rem,12vw,3rem)] font-black tracking-tight text-sol [overflow-wrap:anywhere] sm:text-6xl [-webkit-text-stroke:2px_var(--color-azul)]">
                     {hito.marca}
                   </p>
                   <h3 className="mt-2 text-2xl font-black text-azul">{hito.titulo}</h3>

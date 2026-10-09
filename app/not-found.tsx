@@ -24,7 +24,7 @@ export default function NoEncontrada() {
           <Link href="/" className="rounded-full bg-azul px-6 py-3.5 font-extrabold text-white transition hover:bg-azul-700">
             Ir al inicio
           </Link>
-          <a href={URL_ECOMMERCE} className="rounded-full bg-verde px-6 py-3.5 font-extrabold text-white transition hover:bg-verde-vivo">
+          <a href={URL_ECOMMERCE} className="rounded-full bg-verde px-6 py-3.5 font-extrabold text-white transition hover:bg-verde-700">
             Compra online
           </a>
         </div>

@@ -149,7 +149,7 @@ export function Entregas() {
                       <span className="text-5xl font-black opacity-25" aria-hidden>0{indice + 1}</span>
                     </div>
                     <h3 className="mt-6 text-3xl font-black tracking-tight">{modalidad.titulo}</h3>
-                    <p className="mt-1 font-bold opacity-80">{modalidad.vehiculo}</p>
+                    <p className="mt-1 font-bold opacity-90">{modalidad.vehiculo}</p>
                     <p className="mt-4 max-w-md text-pretty opacity-90">{modalidad.descripcion}</p>
                     <div className="mt-6 flex flex-wrap gap-2 text-sm font-extrabold">
                       <span className="rounded-full bg-black/10 px-3 py-1.5">{modalidad.tiempo}</span>

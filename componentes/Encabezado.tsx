@@ -156,7 +156,7 @@ export function Encabezado() {
           <a
             href={URL_ECOMMERCE}
             aria-label="Compra online"
-            className="inline-flex shrink-0 items-center gap-[8px] rounded-full bg-verde px-[16px] py-[10px] text-sm font-extrabold text-white transition hover:bg-verde-vivo sm:px-[20px]"
+            className="inline-flex shrink-0 items-center gap-[8px] rounded-full bg-verde px-[16px] py-[10px] text-sm font-extrabold text-white transition hover:bg-verde-700 sm:px-[20px]"
           >
             <IconoCarrito className="h-[16px] w-[16px]" />
             {/* Se oculta si la cabecera no tiene espacio (pantallas de 280 px o texto ampliado) */}
@@ -215,7 +215,7 @@ export function Encabezado() {
           </ul>
           <a
             href={URL_ECOMMERCE}
-            className="mt-auto inline-flex items-center justify-center gap-2 rounded-full bg-verde-vivo px-6 py-4 text-lg font-extrabold"
+            className="mt-auto inline-flex items-center justify-center gap-2 rounded-full bg-verde px-6 py-4 text-lg font-extrabold"
           >
             <IconoCarrito className="h-5 w-5" /> Compra online
           </a>

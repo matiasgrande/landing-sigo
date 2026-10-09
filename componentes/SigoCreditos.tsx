@@ -86,7 +86,7 @@ export function SigoCreditos() {
               key={titulo}
               como="li"
               retraso={indice * 0.12}
-              className="relative h-full rounded-[2rem] bg-white/10 p-7 ring-1 ring-white/15"
+              className="relative h-full rounded-[2rem] bg-azul-900/15 p-7 ring-1 ring-white/15"
             >
                 <span className="absolute right-6 top-5 text-6xl font-black text-white/10" aria-hidden>
                   {indice + 1}
@@ -95,7 +95,7 @@ export function SigoCreditos() {
                   <Icono className="h-7 w-7" />
                 </span>
                 <h3 className="mt-6 text-2xl font-black">{titulo}</h3>
-                <p className="mt-2 text-white/80">{texto}</p>
+                <p className="mt-2 text-white/90">{texto}</p>
             </Revelar>
           ))}
         </ol>
@@ -107,7 +107,7 @@ export function SigoCreditos() {
           >
             Recargar Sigo Créditos
           </a>
-          <p className="text-sm text-white/70">Se aplican las comisiones de PayPal e IGTF vigentes.</p>
+          <p className="text-sm text-white/90">Se aplican las comisiones de PayPal e IGTF vigentes.</p>
         </Revelar>
 
         {/* Formas de pago */}
