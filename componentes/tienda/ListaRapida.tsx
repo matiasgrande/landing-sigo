@@ -4,6 +4,7 @@ import { useId, useState, type FormEvent } from "react";
 import { useTienda } from "@/componentes/tienda/ContextoTienda";
 import { interpretarPedido, MAXIMO_CARACTERES, type ResultadoInterpretacion } from "@/lib/interpretarPedido";
 import { IconoEnviar } from "@/componentes/Iconos";
+import { disponibleEn } from "@/lib/tienda/comercio";
 
 export const ID_LISTA_RAPIDA = "lista-rapida";
 
@@ -11,7 +12,7 @@ const EJEMPLOS = ["2 harinas pan, 1 kg de arroz, aceite y café", "Para la parri
 
 /** "Escribe tu lista" dentro de la tienda: lo interpretado va directo al carrito */
 export function ListaRapida({ claro = false }: { claro?: boolean }) {
-  const { indice, agregar, setCarritoAbierto } = useTienda();
+  const { indice, agregar, setCarritoAbierto, sucursal } = useTienda();
   const [texto, setTexto] = useState("");
   const [resultado, setResultado] = useState<ResultadoInterpretacion | null>(null);
   const idCampo = useId();
@@ -20,7 +21,7 @@ export function ListaRapida({ claro = false }: { claro?: boolean }) {
     const limpio = entrada.trim().slice(0, MAXIMO_CARACTERES);
     if (!limpio || !indice) return;
     try {
-      const interpretado = interpretarPedido(limpio, indice);
+      const interpretado = interpretarPedido(limpio, indice, (producto) => disponibleEn(producto, sucursal));
       interpretado.lineas.forEach((linea) => agregar(linea.producto.id, linea.cantidad));
       setResultado(interpretado);
       setTexto("");

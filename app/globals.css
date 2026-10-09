@@ -57,10 +57,10 @@ form[id] {
   }
 }
 
+/* El contorno sigue la forma del elemento (outline respeta border-radius); no se fuerza un radio */
 :focus-visible {
   outline: 3px solid var(--color-sol);
   outline-offset: 3px;
-  border-radius: 6px;
 }
 
 @media (prefers-reduced-motion: reduce) {

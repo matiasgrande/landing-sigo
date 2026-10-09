@@ -17,9 +17,10 @@ import { IconoCarrito, IconoChat, IconoUbicacion } from "@/componentes/Iconos";
 const PALABRAS_TITULO = ["Sirviendo", "con", "amor"];
 
 const LINEAS_VISTA_PREVIA = [
-  { texto: "2 Harina P.A.N.", precio: 2.4 },
-  { texto: "500 g Queso blanco", precio: 3.75 },
-  { texto: "1 Docena de huevos", precio: 2.9 },
+  // Precios del catálogo real (Costazul); el total supera la compra mínima de la tienda
+  { texto: "2 Harina P.A.N.", precio: 1.98 },
+  { texto: "500 g Queso blanco", precio: 8.76 },
+  { texto: "1 Cartón de huevos", precio: 3.49 },
 ];
 const TOTAL_VISTA_PREVIA = LINEAS_VISTA_PREVIA.reduce((suma, linea) => suma + linea.precio, 0);
 

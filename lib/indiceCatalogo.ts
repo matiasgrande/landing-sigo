@@ -15,7 +15,15 @@ export function normalizarParaBuscar(texto: string): string {
     .replace(/[̀-ͯ]/g, "")
     .replace(/([a-z])\.(?=[a-z])/g, "$1")
     .replace(/[^a-z0-9ñ\s]/g, " ")
-    .replace(/ñ/g, "n");
+    .replace(/ñ/g, "n")
+    // Formas pegadas o separadas de marcas conocidas
+    .replace(/\b7\s+up\b/g, "7up")
+    .replace(/\bcocacola\b/g, "coca cola");
+}
+
+/** Cantidades y medidas sueltas ("2", "1.5", "500g", "2kg") que no describen el producto */
+export function esMedida(palabra: string): boolean {
+  return /^\d+(?:[.,]\d+)?(?:kgs?|k|grs?|g|ml|lts?|l|cc|oz|und|unds|x)?$/.test(palabra);
 }
 
 /** Variantes singulares simples: "tomates" -> "tomate", "limones" -> "limon" */
@@ -30,7 +38,7 @@ export function variantes(palabra: string): string[] {
 export function palabrasClave(texto: string): string[] {
   return normalizarParaBuscar(texto)
     .split(/\s+/)
-    .filter((p) => p.length > 1 && !/^\d/.test(p) && !PALABRAS_SIN_PESO.has(p));
+    .filter((p) => p.length > 1 && !esMedida(p) && !PALABRAS_SIN_PESO.has(p));
 }
 
 interface EntradaIndice {
@@ -92,9 +100,14 @@ interface Candidato {
  * Busca el producto que mejor coincide con las palabras escritas.
  * Puntaje por palabra: sustantivo principal 3, resto del nombre 2, categoría 1. La primera
  * palabra pedida suele ser el tipo de producto: si es el sustantivo principal suma 1 más.
- * Desempate: nombre más específico (más palabras cubiertas), disponible y más económico.
+ * Desempate: disponible en la sucursal, nombre más específico (más palabras cubiertas) y más económico.
  */
-export function buscarEnIndice(palabras: string[], indice: IndiceCatalogo, maxAlternativas = 5): ResultadoBusqueda {
+export function buscarEnIndice(
+  palabras: string[],
+  indice: IndiceCatalogo,
+  estaDisponible: (producto: ProductoCatalogo) => boolean = (producto) => producto.disponible !== false,
+  maxAlternativas = 5,
+): ResultadoBusqueda {
   if (palabras.length === 0) return { tipo: "ninguno" };
   const variantesPorPalabra = palabras.map(variantes);
   const candidatos: Candidato[] = [];
@@ -105,7 +118,8 @@ export function buscarEnIndice(palabras: string[], indice: IndiceCatalogo, maxAl
     let conPrincipal = false;
     for (const [posicion, opciones] of variantesPorPalabra.entries()) {
       if (opciones.some((v) => entrada.principal.has(v))) {
-        puntaje += posicion === 0 ? 4 : 3;
+        // Medio punto más si también nombra su categoría: "jamón" -> Jamones antes que Untables
+        puntaje += (posicion === 0 ? 4 : 3) + (opciones.some((v) => entrada.categoria.has(v)) ? 0.5 : 0);
         enNombre++;
         conPrincipal = true;
       } else if (opciones.some((v) => entrada.nombre.has(v))) {
@@ -124,8 +138,8 @@ export function buscarEnIndice(palabras: string[], indice: IndiceCatalogo, maxAl
     (a, b) =>
       Number(b.conPrincipal) - Number(a.conPrincipal) ||
       b.puntaje - a.puntaje ||
+      Number(estaDisponible(b.entrada.producto)) - Number(estaDisponible(a.entrada.producto)) ||
       b.enNombre / b.entrada.totalPalabras - a.enNombre / a.entrada.totalPalabras ||
-      Number(b.entrada.producto.disponible ?? true) - Number(a.entrada.producto.disponible ?? true) ||
       a.entrada.producto.precioUsd - b.entrada.producto.precioUsd,
   );
 
@@ -133,7 +147,13 @@ export function buscarEnIndice(palabras: string[], indice: IndiceCatalogo, maxAl
   if (!mejor) return { tipo: "ninguno" };
   // Lo pedido no es el producto principal de ninguno ("huevos" solo aparece en "Pasta al huevo"):
   // mejor preguntar que adivinar
-  if (!mejor.conPrincipal) {
+  // Excepción: una marca que cubre todo lo pedido dentro de una sola categoría ("7up" -> Refrescos)
+  const marcaClara =
+    mejor.enNombre === palabras.length &&
+    candidatos
+      .filter((c) => c.puntaje === mejor.puntaje)
+      .every((c) => c.entrada.producto.categoria === mejor.entrada.producto.categoria);
+  if (!mejor.conPrincipal && !marcaClara) {
     return { tipo: "ambiguo", opciones: candidatos.slice(0, 3).map((c) => c.entrada.producto) };
   }
   const alternativas = candidatos

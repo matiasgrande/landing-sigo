@@ -90,13 +90,19 @@ function adaptar(datos: CatalogoCompacto): ProductoCatalogo[] {
 }
 
 let promesa: Promise<IndiceCatalogo> | null = null;
+/** Momento del último fallo: mientras sea reciente se responde con la demo sin volver a esperar */
+let ultimoFallo = 0;
+const ESPERA_REINTENTO_MS = 30000;
 
 /**
  * Carga (una sola vez) el catálogo real extraído de sigo.com.ve y lo indexa.
- * Si la red falla o el archivo no es válido, usa el catálogo de demostración.
+ * Si la red falla o el archivo no es válido, usa el catálogo de demostración y lo reintenta
+ * pasados 30 s (o antes con `forzar`).
  */
-export function cargarCatalogo(): Promise<IndiceCatalogo> {
-  if (promesa) return promesa;
+export function cargarCatalogo(forzar = false): Promise<IndiceCatalogo> {
+  const falloVencido = ultimoFallo > 0 && Date.now() - ultimoFallo > ESPERA_REINTENTO_MS;
+  if (promesa && !forzar && !falloVencido) return promesa;
+  if (promesa && ultimoFallo === 0) return promesa;
   promesa = (async () => {
     const controlador = new AbortController();
     const limite = window.setTimeout(() => controlador.abort(), LIMITE_ESPERA_MS);
@@ -105,10 +111,11 @@ export function cargarCatalogo(): Promise<IndiceCatalogo> {
       if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
       const datos: unknown = await respuesta.json();
       if (!esCatalogoCompacto(datos)) throw new Error("Catálogo con formato inválido");
+      ultimoFallo = 0;
       return crearIndice(adaptar(datos), "real", datos.extraidoEn);
     } catch {
-      // Sin red o archivo dañado: la demo sigue con el catálogo de ejemplo y se reintenta la próxima vez
-      promesa = null;
+      // Sin red o archivo dañado: la demo sigue con el catálogo de ejemplo
+      ultimoFallo = Date.now();
       return crearIndice(CATALOGO_DEMO, "demo");
     } finally {
       window.clearTimeout(limite);

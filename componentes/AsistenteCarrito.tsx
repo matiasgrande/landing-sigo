@@ -144,7 +144,8 @@ export function AsistenteCarrito() {
         gsap.to("[data-punto]", { y: -4, duration: 0.3, ease: "sine.inOut", repeat: -1, yoyo: true, stagger: 0.12 });
       });
     },
-    { dependencies: [escribiendo], scope: seccion },
+    // revertOnUpdate: al dejar de escribir se matan los tweens infinitos en vez de acumularlos
+    { dependencies: [escribiendo], scope: seccion, revertOnUpdate: true },
   );
 
   // Entrada de productos nuevos en el carrito
@@ -282,13 +283,18 @@ export function AsistenteCarrito() {
     try {
       const crudo = window.localStorage.getItem(CLAVE_CARRITO);
       const previo: unknown = crudo ? JSON.parse(crudo) : {};
-      const cantidades: Record<string, number> =
-        typeof previo === "object" && previo !== null ? { ...(previo as Record<string, number>) } : {};
+      // Se conserva solo lo válido de la tienda (enteros de 1 a 99)
+      const cantidades: Record<string, number> = {};
+      if (typeof previo === "object" && previo !== null) {
+        for (const [id, cantidad] of Object.entries(previo)) {
+          if (Number.isInteger(cantidad) && cantidad >= 1 && cantidad <= 99) cantidades[id] = cantidad;
+        }
+      }
       for (const linea of carrito) {
         // Solo productos del catálogo real (IDs numéricos); los de la demostración no existen en la tienda
         if (!/^\d+$/.test(linea.producto.id)) continue;
-        const actual = typeof cantidades[linea.producto.id] === "number" ? (cantidades[linea.producto.id] ?? 0) : 0;
-        cantidades[linea.producto.id] = Math.min(99, actual + Math.max(1, Math.round(linea.cantidad)));
+        // Se fija la cantidad del asistente (no se suma): pulsar varias veces no duplica el pedido
+        cantidades[linea.producto.id] = Math.min(99, Math.max(1, Math.round(linea.cantidad)));
       }
       window.localStorage.setItem(CLAVE_CARRITO, JSON.stringify(cantidades));
     } catch {

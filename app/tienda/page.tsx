@@ -10,6 +10,14 @@ export const metadata: Metadata = {
   // Es un prototipo: no debe competir en buscadores con la tienda real
   robots: { index: false, follow: false },
   alternates: { canonical: null },
+  openGraph: {
+    type: "website",
+    locale: "es_VE",
+    url: "https://matiasgrande.github.io/landing-sigo/tienda/",
+    siteName: "SIGO Supermercados",
+    title: "Tienda online SIGO (prototipo)",
+    description: "Más de 5.000 productos reales, búsqueda tolerante a errores y arma tu carrito escribiendo tu lista.",
+  },
 };
 
 export default function PaginaTienda() {
