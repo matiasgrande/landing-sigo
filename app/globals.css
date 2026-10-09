@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+@theme {
+  /* Colores extraídos del logo oficial */
+  --color-azul: #001e63;
+  --color-azul-900: #00123d;
+  --color-azul-700: #0b2f86;
+  --color-azul-100: #e6ecf8;
+  --color-verde: #007e14;
+  --color-verde-vivo: #00a807;
+  --color-verde-100: #e3f5e6;
+  --color-gris: #666666;
+  --color-tinta: #1b2333;
+  --color-crema: #f7f8fc;
+  --color-sol: #ffc21a;
+  --color-coral: #ff6b4a;
+
+  --font-sans: var(--fuente-nunito), ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--color-crema);
+  color: var(--color-tinta);
+  overflow-x: clip;
+}
+
+/* Con texto muy ampliado, una palabra larga de un título se parte en vez de desbordar la página */
+h1,
+h2,
+h3 {
+  overflow-wrap: anywhere;
+}
+
+/* Las anclas no quedan ocultas bajo la cabecera fija */
+section[id],
+form[id] {
+  scroll-margin-top: 5rem;
+}
+
+/* En móvil, lo que recibe foco no queda tapado por la barra inferior fija */
+@media (max-width: 1023px) {
+  html {
+    scroll-padding-bottom: 6.5rem;
+  }
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-sol);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* Con JS activo, los elementos de entrada del hero esperan a GSAP (evita parpadeo) */
+.js [data-hero] {
+  visibility: hidden;
+}
+
+/* Cabecera: decide según su ancho en em (crece con el texto ampliado; rem usaría siempre 16 px) */
+.nav-principal {
+  container-type: inline-size;
+}
+@container (max-width: 18em) {
+  .texto-compra {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+@container (max-width: 58em) {
+  .enlaces-principales {
+    display: none;
+  }
+  .boton-menu {
+    display: grid;
+  }
+}
+
+/* Oculta la barra de scroll en carruseles horizontales */
+.sin-barra {
+  scrollbar-width: none;
+}
+.sin-barra::-webkit-scrollbar {
+  display: none;
+}

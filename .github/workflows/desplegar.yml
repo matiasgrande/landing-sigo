@@ -1,0 +1,46 @@
+name: Desplegar en GitHub Pages
+
+on:
+  push:
+    branches: [main, claude/propuesta-landing]
+  workflow_dispatch:
+  # Reconstruye cada 1 de enero para actualizar los años de trayectoria y el ©
+  schedule:
+    - cron: "0 5 1 1 *"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: despliegue-pages
+  cancel-in-progress: true
+
+jobs:
+  construir-y-desplegar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Verificar tipos
+        run: npm run lint
+
+      - name: Construir sitio estático
+        run: npm run build
+        env:
+          NEXT_PUBLIC_RUTA_BASE: /landing-sigo
+
+      - name: Publicar en la rama gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./out
+          publish_branch: gh-pages
+          force_orphan: true
