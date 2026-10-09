@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import type { ProductoCatalogo } from "@/datos/catalogo";
 import { useTienda, type OrdenListado } from "@/componentes/tienda/ContextoTienda";
 import { RejillaCargando, RejillaProductos } from "@/componentes/tienda/TarjetaProducto";
@@ -19,34 +19,40 @@ const ETIQUETAS_ORDEN: Record<OrdenListado, string> = {
 export function Listado() {
   const { indice, ruta, navegar, sucursal } = useTienda();
 
-  const { titulo, base, correccion } = useMemo(() => {
-    if (!indice) return { titulo: "", base: [] as ProductoCatalogo[], correccion: null as string | null };
-    if (ruta.vista === "buscar" && ruta.consulta) {
-      const resultado = buscarProductos(indice, ruta.consulta);
+  const { titulo, base, correccion, ignoradas } = useMemo(() => {
+    const vacio = { titulo: "", base: [] as ProductoCatalogo[], correccion: null as string | null, ignoradas: [] as string[] };
+    if (!indice) return vacio;
+    if (ruta.vista === "buscar") {
+      const consulta = (ruta.consulta ?? "").trim();
+      if (!consulta) return { ...vacio, titulo: "Escribe qué buscas" };
+      // Mismo criterio que el autocompletado (la última palabra vale como prefijo: "caf" -> café)
+      const resultado = buscarProductos(indice, consulta, true, (p) => disponibleEn(p, sucursal));
       return {
-        titulo: `Resultados para "${resultado.correccion ?? ruta.consulta}"`,
+        titulo: `Resultados para "${resultado.correccion ?? consulta}"`,
         base: resultado.productos,
-        correccion: resultado.correccion ? ruta.consulta : null,
+        correccion: resultado.correccion ? consulta : null,
+        ignoradas: resultado.ignoradas,
       };
     }
     const productos = indice.entradas
       .map((e) => e.producto)
       .filter((p) => aSlug(p.departamento ?? "") === ruta.departamento);
-    const nombre = productos[0]?.departamento ?? "Departamento";
-    return { titulo: nombreLegible(nombre), base: productos, correccion: null };
-  }, [indice, ruta.vista, ruta.consulta, ruta.departamento]);
+    const nombre = productos[0]?.departamento;
+    return { ...vacio, titulo: nombre ? nombreLegible(nombre) : "Departamento no encontrado", base: productos };
+  }, [indice, ruta.vista, ruta.consulta, ruta.departamento, sucursal]);
 
-  // Categorías presentes en la base (chips)
+  // Categorías presentes en la base (chips); el conteo respeta el filtro de existencia
   const categorias = useMemo(() => {
     const conteo = new Map<string, { nombre: string; slug: string; cantidad: number }>();
     for (const p of base) {
+      if (ruta.soloDisponibles && !disponibleEn(p, sucursal)) continue;
       const slug = aSlug(p.categoria);
       const actual = conteo.get(slug) ?? { nombre: p.categoria, slug, cantidad: 0 };
       actual.cantidad++;
       conteo.set(slug, actual);
     }
     return [...conteo.values()].sort((a, b) => b.cantidad - a.cantidad);
-  }, [base]);
+  }, [base, ruta.soloDisponibles, sucursal]);
 
   const filtrados = useMemo(() => {
     let lista = base;
@@ -69,6 +75,11 @@ export function Listado() {
   const pagina = Math.min(ruta.pagina, paginas);
   const visibles = filtrados.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
   const sinDisponibles = ruta.soloDisponibles && filtrados.length === 0 && base.length > 0;
+
+  // Página fuera de rango en la URL (?pg=999): se corrige sin añadir historial
+  useEffect(() => {
+    if (indice && ruta.pagina !== pagina) navegar({ pagina }, { reemplazar: true });
+  }, [indice, ruta.pagina, pagina, navegar]);
 
   return (
     <section aria-labelledby="titulo-listado" className="mx-auto max-w-7xl px-4 py-6">
@@ -93,6 +104,11 @@ export function Listado() {
           {correccion && (
             <p className="text-sm text-gris">
               Corregimos tu búsqueda: escribiste <strong className="text-azul">{correccion}</strong>.
+            </p>
+          )}
+          {ignoradas.length > 0 && (
+            <p className="text-sm text-gris">
+              No encontramos <strong className="text-azul">{ignoradas.join(", ")}</strong>: mostramos lo que coincide con el resto.
             </p>
           )}
           {indice && <p className="text-sm text-gris">{filtrados.length.toLocaleString("es-VE")} productos</p>}
@@ -147,7 +163,7 @@ export function Listado() {
                   ruta.categoria === c.slug ? "bg-verde text-white" : "bg-white text-azul ring-1 ring-azul/10"
                 }`}
               >
-                {nombreLegible(c.nombre)} <span className="opacity-60">{c.cantidad}</span>
+                {nombreLegible(c.nombre)} <span className="font-semibold">{c.cantidad}</span>
               </button>
             </li>
           ))}
@@ -155,6 +171,7 @@ export function Listado() {
       )}
 
       <div className="mt-5">
+        <h2 className="sr-only">Productos</h2>
         {!indice ? (
           <RejillaCargando />
         ) : visibles.length > 0 ? (

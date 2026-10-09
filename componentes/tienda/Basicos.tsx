@@ -7,6 +7,17 @@ import { formatearBs, formatearUsd } from "@/lib/useTasaBcv";
 import { IconoCerrar, IconoMas, IconoMenos, IconoCarrito } from "@/componentes/Iconos";
 import { useTienda } from "@/componentes/tienda/ContextoTienda";
 
+/** Modales abiertos a la vez (carrito + selector de entrega): el scroll se libera al cerrar el último */
+let modalesAbiertos = 0;
+function bloquearScroll(): void {
+  modalesAbiertos++;
+  document.body.style.overflow = "hidden";
+}
+function liberarScroll(): void {
+  modalesAbiertos = Math.max(0, modalesAbiertos - 1);
+  if (modalesAbiertos === 0) document.body.style.overflow = "";
+}
+
 /**
  * Diálogo modal con <dialog> nativo: foco atrapado, Escape y fondo inerte sin código extra.
  * `lado` lo convierte en panel lateral (carrito) en vez de ventana centrada.
@@ -18,6 +29,7 @@ export function Dialogo({
   children,
   lado = false,
   ancho = "max-w-lg",
+  claveContenido,
 }: {
   abierto: boolean;
   alCerrar: () => void;
@@ -25,20 +37,19 @@ export function Dialogo({
   children: ReactNode;
   lado?: boolean;
   ancho?: string;
+  /** Al cambiar, el contenido se monta de nuevo y su scroll vuelve arriba (otra ficha) */
+  claveContenido?: string;
 }) {
   const referencia = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
     const dialogo = referencia.current;
-    if (!dialogo) return;
-    if (abierto && !dialogo.open) {
-      dialogo.showModal();
-      document.body.style.overflow = "hidden";
-    } else if (!abierto && dialogo.open) {
-      dialogo.close();
-    }
+    if (!dialogo || !abierto) return;
+    if (!dialogo.open) dialogo.showModal();
+    bloquearScroll();
     return () => {
-      document.body.style.overflow = "";
+      if (dialogo.open) dialogo.close();
+      liberarScroll();
     };
   }, [abierto]);
 
@@ -46,9 +57,9 @@ export function Dialogo({
     <dialog
       ref={referencia}
       aria-label={titulo}
+      // "close" llega asíncrono: si el diálogo ya se volvió a abrir, no se cierra el estado
       onClose={() => {
-        document.body.style.overflow = "";
-        alCerrar();
+        if (!referencia.current?.open) alCerrar();
       }}
       // Clic en el fondo (fuera del contenido) cierra
       onClick={(evento) => {
@@ -71,7 +82,9 @@ export function Dialogo({
           <IconoCerrar className="h-5 w-5" />
         </button>
       </div>
-      <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+      <div key={claveContenido} className="min-h-0 flex-1 overflow-y-auto">
+        {children}
+      </div>
     </dialog>
   );
 }
@@ -94,7 +107,9 @@ export function Precio({ usd, grande = false, anterior }: { usd: number; grande?
 
 /** Imagen del producto (externa, de sigo.com.ve) con respaldo si no carga */
 export function ImagenProducto({ producto, className = "" }: { producto: ProductoCatalogo; className?: string }) {
-  const [fallo, setFallo] = useState(false);
+  // El fallo se recuerda por imagen: otra imagen en el mismo lugar vuelve a intentarse
+  const [falloEn, setFalloEn] = useState<string | null>(null);
+  const fallo = falloEn !== null && falloEn === producto.imagen;
   if (!producto.imagen || fallo) {
     return (
       <div className={`grid place-items-center bg-crema text-3xl font-black text-azul/20 ${className}`} aria-hidden>
@@ -110,10 +125,21 @@ export function ImagenProducto({ producto, className = "" }: { producto: Product
       decoding="async"
       width={260}
       height={260}
-      onError={() => setFallo(true)}
+      onError={() => setFalloEn(producto.imagen ?? null)}
       className={`object-contain ${className}`}
     />
   );
+}
+
+const CLAVE_AVISOS = "sigo:avisos-existencia";
+
+function leerAvisos(): string[] {
+  try {
+    const valor: unknown = JSON.parse(window.localStorage.getItem(CLAVE_AVISOS) ?? "[]");
+    return Array.isArray(valor) ? valor.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
 }
 
 /** "Agregar" que se convierte en stepper dentro de la misma tarjeta */
@@ -130,12 +156,28 @@ export function ControlCantidad({
   const cantidad = cantidades[producto.id] ?? 0;
   const [avisado, setAvisado] = useState(false);
 
+  useEffect(() => {
+    setAvisado(leerAvisos().includes(producto.id));
+  }, [producto.id]);
+
+  function pedirAviso() {
+    // Prototipo: se guarda en este dispositivo; en producción se registraría en el e-commerce
+    try {
+      const avisos = leerAvisos();
+      if (!avisos.includes(producto.id)) window.localStorage.setItem(CLAVE_AVISOS, JSON.stringify([...avisos, producto.id]));
+    } catch {
+      // Sin almacenamiento: el aviso vale solo para esta visita
+    }
+    setAvisado(true);
+  }
+
   if (!disponible) {
     return (
       <button
         type="button"
-        onClick={() => setAvisado(true)}
+        onClick={pedirAviso}
         disabled={avisado}
+        title={avisado ? "Guardado en este dispositivo (prototipo)" : undefined}
         className="min-h-11 w-full rounded-full border border-azul/15 px-3 text-sm font-extrabold text-azul transition hover:bg-azul-100 disabled:border-verde/30 disabled:text-verde"
       >
         {avisado ? "Te avisaremos ✓" : "Avísame si llega"}

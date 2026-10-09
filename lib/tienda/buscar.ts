@@ -78,27 +78,38 @@ function resolverPalabra(palabra: string, vocabulario: Vocabulario, esPrefijo: b
 
 export interface ResultadoBusquedaTienda {
   productos: ProductoCatalogo[];
-  /** Palabras corregidas cuando hubo errores de tipeo ("hrina" -> "harina") */
+  /** Palabras corregidas cuando hubo errores de tipeo ("hrina" -> "harina"), con sus tildes */
   correccion: string | null;
+  /** Palabras que no coinciden con nada y se ignoraron para mostrar algo ("arroz xyzabc") */
+  ignoradas: string[];
 }
+
+type Disponibilidad = (producto: ProductoCatalogo) => boolean;
+const segunCatalogo: Disponibilidad = (producto) => producto.disponible !== false;
 
 /**
  * Busca productos para la tienda: todas las palabras deben coincidir (nombre o categoría);
  * si no hay resultados así, se relaja a cualquiera de ellas.
  */
-export function buscarProductos(indice: IndiceCatalogo, texto: string, esPrefijo = false): ResultadoBusquedaTienda {
+export function buscarProductos(
+  indice: IndiceCatalogo,
+  texto: string,
+  esPrefijo = false,
+  estaDisponible: Disponibilidad = segunCatalogo,
+): ResultadoBusquedaTienda {
   const palabras = palabrasClave(texto);
-  if (palabras.length === 0) return { productos: [], correccion: null };
+  if (palabras.length === 0) return { productos: [], correccion: null, ignoradas: [] };
   const vocabulario = vocabularioDe(indice);
   const resueltas = palabras.map((p, i) => resolverPalabra(p, vocabulario, esPrefijo && i === palabras.length - 1));
 
   const corregidas = palabras.map((p, i) => {
     const opciones = resueltas[i] ?? [];
     return opciones.length > 0 && !variantes(p).some((v) => opciones.includes(v)) && !opciones.some((o) => o.startsWith(p))
-      ? opciones[0]
+      ? (opciones[0] ?? p)
       : p;
   });
-  const correccion = corregidas.join(" ") !== palabras.join(" ") ? corregidas.join(" ") : null;
+  const correccion =
+    corregidas.join(" ") !== palabras.join(" ") ? corregidas.map((p) => vocabulario.visibles.get(p) ?? p).join(" ") : null;
 
   const puntuar = (exigirTodas: boolean) => {
     const resultados: { producto: ProductoCatalogo; puntaje: number }[] = [];
@@ -124,14 +135,18 @@ export function buscarProductos(indice: IndiceCatalogo, texto: string, esPrefijo
   };
 
   let resultados = puntuar(true);
-  if (resultados.length === 0) resultados = puntuar(false);
+  let ignoradas: string[] = [];
+  if (resultados.length === 0) {
+    resultados = puntuar(false);
+    ignoradas = palabras.filter((_, i) => (resueltas[i] ?? []).length === 0);
+  }
   resultados.sort(
     (a, b) =>
       b.puntaje - a.puntaje ||
-      Number(b.producto.disponible ?? true) - Number(a.producto.disponible ?? true) ||
+      Number(estaDisponible(b.producto)) - Number(estaDisponible(a.producto)) ||
       a.producto.precioUsd - b.producto.precioUsd,
   );
-  return { productos: resultados.map((r) => r.producto), correccion };
+  return { productos: resultados.map((r) => r.producto), correccion, ignoradas };
 }
 
 export interface SugerenciaCategoria {
@@ -144,15 +159,19 @@ export interface Sugerencias {
   terminos: string[];
   categorias: SugerenciaCategoria[];
   productos: ProductoCatalogo[];
+  /** Resultados con existencia (lo que muestra el listado por defecto) */
   total: number;
   correccion: string | null;
 }
 
 /** Autocompletado en tres bloques: términos, categorías y productos con precio */
-export function sugerir(indice: IndiceCatalogo, texto: string): Sugerencias {
+export function sugerir(indice: IndiceCatalogo, texto: string, estaDisponible: Disponibilidad = segunCatalogo): Sugerencias {
   const consulta = normalizarParaBuscar(texto).trim();
   if (consulta.length < 2) return { terminos: [], categorias: [], productos: [], total: 0, correccion: null };
-  const { productos, correccion } = buscarProductos(indice, consulta, true);
+  const resultado = buscarProductos(indice, consulta, true, estaDisponible);
+  // Las sugerencias muestran solo lo que se puede comprar en la sucursal, igual que el listado
+  const productos = resultado.productos.filter(estaDisponible);
+  const correccion = resultado.correccion;
 
   // Categorías más frecuentes entre los resultados
   const conteo = new Map<string, SugerenciaCategoria>();
@@ -165,7 +184,7 @@ export function sugerir(indice: IndiceCatalogo, texto: string): Sugerencias {
   const categorias = [...conteo.values()].sort((a, b) => b.cantidad - a.cantidad).slice(0, 3);
 
   // Términos: la consulta completada con palabras frecuentes de los primeros resultados
-  const base = (correccion ?? consulta).split(/\s+/);
+  const base = normalizarParaBuscar(correccion ?? consulta).trim().split(/\s+/);
   const ultima = base[base.length - 1] ?? "";
   const frecuencia = new Map<string, number>();
   for (const producto of productos.slice(0, 60)) {

@@ -14,6 +14,22 @@ import { ID_LISTA_RAPIDA } from "@/componentes/tienda/ListaRapida";
 import { IconoBuscar, IconoCarrito, IconoCasa, IconoChat } from "@/componentes/Iconos";
 import { WHATSAPP_ATENCION, crearEnlaceWhatsApp } from "@/datos/contacto";
 
+/** El catálogo real no cargó: se avisa en vez de mostrar en silencio el de demostración */
+function AvisoCatalogo() {
+  const { indice, reintentarCatalogo } = useTienda();
+  if (indice?.origen !== "demo") return null;
+  return (
+    <div role="alert" className="bg-sol px-4 py-3 text-sm font-bold text-azul">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2">
+        <p>No pudimos cargar el catálogo completo. Estás viendo productos de ejemplo; tu carrito sigue guardado.</p>
+        <button type="button" onClick={reintentarCatalogo} className="min-h-11 rounded-full bg-azul px-4 font-extrabold text-white">
+          Reintentar
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function BarraInferior() {
   const { navegar, totalArticulos, setCarritoAbierto, ruta } = useTienda();
 
@@ -24,7 +40,7 @@ function BarraInferior() {
       campo?.focus({ preventScroll: true });
     };
     if (ruta.vista !== "inicio") {
-      navegar({ vista: "inicio", departamento: null, categoria: null, consulta: null });
+      navegar({ vista: "inicio", departamento: null, categoria: null, consulta: null, producto: null });
       window.setTimeout(ir, 60);
     } else ir();
   }
@@ -32,14 +48,14 @@ function BarraInferior() {
   const boton = "flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-2xl text-[0.7rem] font-extrabold text-azul active:bg-azul-100";
   return (
     <nav aria-label="Accesos rápidos de la tienda" className="fixed inset-x-3 bottom-3 z-30 grid grid-cols-4 rounded-3xl bg-white p-1.5 shadow-xl shadow-azul/20 ring-1 ring-azul/10 md:hidden">
-      <button type="button" className={boton} onClick={() => navegar({ vista: "inicio", departamento: null, categoria: null, consulta: null })}>
+      <button type="button" className={boton} onClick={() => navegar({ vista: "inicio", departamento: null, categoria: null, consulta: null, producto: null })}>
         <IconoCasa className="h-5 w-5" /> Inicio
       </button>
       <button
         type="button"
         className={boton}
         onClick={() => {
-          window.scrollTo({ top: 0 });
+          window.scrollTo({ top: 0, behavior: "instant" });
           document.getElementById(ID_BUSCADOR)?.focus();
         }}
       >
@@ -65,6 +81,7 @@ export function Tienda() {
   return (
     <>
       <CabeceraTienda />
+      <AvisoCatalogo />
       <main id="contenido" className="min-h-[60vh] pb-28 md:pb-10">
         {ruta.vista === "inicio" && <InicioTienda />}
         {(ruta.vista === "listado" || ruta.vista === "buscar") && <Listado />}

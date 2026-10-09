@@ -9,14 +9,15 @@ import { Buscador } from "@/componentes/tienda/Buscador";
 import { useTasa } from "@/componentes/ContextoTasa";
 import { IconoCarrito, IconoUbicacion } from "@/componentes/Iconos";
 import { formatearFechaTasa, formatearUsd } from "@/lib/useTasaBcv";
-import { SUCURSALES_TIENDA, aSlug, nombreLegible } from "@/lib/tienda/comercio";
+import { SUCURSALES_TIENDA, aSlug, disponibleEn, nombreLegible } from "@/lib/tienda/comercio";
 
-/** Departamentos con al menos 3 productos, de mayor a menor */
+/** Departamentos con al menos 3 productos con existencia en la sucursal, de mayor a menor */
 export function useDepartamentos(): { nombre: string; slug: string; cantidad: number }[] {
-  const { indice } = useTienda();
+  const { indice, sucursal } = useTienda();
   return useMemo(() => {
     const conteo = new Map<string, number>();
     indice?.entradas.forEach(({ producto }) => {
+      if (!disponibleEn(producto, sucursal)) return;
       const nombre = producto.departamento ?? "Otros";
       conteo.set(nombre, (conteo.get(nombre) ?? 0) + 1);
     });
@@ -24,7 +25,7 @@ export function useDepartamentos(): { nombre: string; slug: string; cantidad: nu
       .filter(([, cantidad]) => cantidad >= 3)
       .sort((a, b) => b[1] - a[1])
       .map(([nombre, cantidad]) => ({ nombre, slug: aSlug(nombre), cantidad }));
-  }, [indice]);
+  }, [indice, sucursal]);
 }
 
 export function CabeceraTienda() {
@@ -41,7 +42,8 @@ export function CabeceraTienda() {
         : "Elige dónde recibir";
 
   return (
-    <header className="sticky top-0 z-40 bg-white shadow-sm">
+    // Fija solo desde tablet: en móvil ocuparía casi media pantalla y la barra inferior ya da Buscar y Carrito
+    <header className="relative z-40 bg-white shadow-sm md:sticky md:top-0 [@media(max-height:500px)]:static">
       {/* Franja: tasa BCV y aviso de prototipo */}
       <div className="bg-azul px-4 py-1.5 text-xs font-semibold text-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-3">

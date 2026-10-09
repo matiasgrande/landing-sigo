@@ -22,25 +22,34 @@ export function SelectorEntrega() {
   return (
     <Dialogo abierto={selectorEntregaAbierto} alCerrar={() => setSelectorEntregaAbierto(false)} titulo="¿Cómo recibes tu compra?">
       <div className="space-y-5 p-5">
-        <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="Modalidad">
-          {(["delivery", "retiro"] as const).map((modo) => (
-            <button
-              key={modo}
-              type="button"
-              role="radio"
-              aria-checked={borrador.modo === modo}
-              onClick={() => setBorrador({ ...borrador, modo })}
-              className={`min-h-14 rounded-2xl border-2 px-3 text-left font-extrabold ${
-                borrador.modo === modo ? "border-azul bg-azul-100 text-azul" : "border-azul/10 text-tinta hover:border-azul/30"
-              }`}
-            >
-              {modo === "delivery" ? "Delivery" : "Retiro en tienda"}
-              <span className="block text-xs font-semibold text-gris">
-                {modo === "delivery" ? "Te lo llevamos" : "En tu vehículo, sin bajarte"}
-              </span>
-            </button>
-          ))}
-        </div>
+        <fieldset>
+          <legend className="sr-only">Modalidad</legend>
+          <div className="grid grid-cols-2 gap-2">
+            {(["delivery", "retiro"] as const).map((modo) => (
+              <label
+                key={modo}
+                className={`flex min-h-14 cursor-pointer items-start gap-2 rounded-2xl border-2 px-3 py-2 font-extrabold has-[:focus-visible]:outline has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-sol ${
+                  borrador.modo === modo ? "border-azul bg-azul-100 text-azul" : "border-azul/10 text-tinta hover:border-azul/30"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="modalidad-entrega"
+                  value={modo}
+                  checked={borrador.modo === modo}
+                  onChange={() => setBorrador({ ...borrador, modo })}
+                  className="mt-1 accent-azul"
+                />
+                <span>
+                  {modo === "delivery" ? "Delivery" : "Retiro en tienda"}
+                  <span className="block text-xs font-semibold text-gris">
+                    {modo === "delivery" ? "Te lo llevamos" : "En tu vehículo, sin bajarte"}
+                  </span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </fieldset>
 
         {borrador.modo === "delivery" && (
           <label className="block">

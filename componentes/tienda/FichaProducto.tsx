@@ -21,10 +21,15 @@ export function FichaProducto() {
       .slice(0, 6);
   }, [producto, indice, sucursal]);
 
-  const cerrar = () => navegar({ producto: null }, { reemplazar: true });
+  // Si la ficha se abrió con su propia entrada de historial, cerrarla es volver atrás (sin entradas fantasma)
+  const cerrar = () => {
+    const estado: unknown = window.history.state;
+    if (typeof estado === "object" && estado !== null && "ficha" in estado) window.history.back();
+    else navegar({ producto: null }, { reemplazar: true });
+  };
 
   return (
-    <Dialogo abierto={Boolean(producto)} alCerrar={cerrar} titulo={producto?.nombre ?? "Producto"} ancho="max-w-3xl">
+    <Dialogo abierto={Boolean(producto)} alCerrar={cerrar} titulo={producto?.nombre ?? "Producto"} ancho="max-w-3xl" claveContenido={producto?.id}>
       {producto && (
         <div className="p-5">
           <div className="grid gap-5 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">

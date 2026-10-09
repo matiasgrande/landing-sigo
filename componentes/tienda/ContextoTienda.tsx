@@ -4,11 +4,20 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ProductoCatalogo } from "@/datos/catalogo";
 import type { IndiceCatalogo } from "@/lib/indiceCatalogo";
 import { cargarCatalogo } from "@/lib/cargarCatalogo";
-import { CLAVE_CARRITO, ENTREGA_INICIAL, precioEn, type ClaveSucursal, type Entrega } from "@/lib/tienda/comercio";
+import {
+  CLAVE_CARRITO,
+  ENTREGA_INICIAL,
+  MAXIMO_POR_PRODUCTO,
+  aCentimos,
+  disponibleEn,
+  esMunicipioValido,
+  precioEn,
+  type ClaveSucursal,
+  type Entrega,
+} from "@/lib/tienda/comercio";
 
 const CLAVE_GUARDADOS = "sigo:guardados-tienda";
 const CLAVE_ENTREGA = "sigo:entrega-tienda";
-const MAXIMO_POR_PRODUCTO = 99;
 
 export type Vista = "inicio" | "listado" | "buscar" | "checkout";
 
@@ -21,7 +30,11 @@ export interface Ruta {
   pagina: number;
   orden: OrdenListado;
   soloDisponibles: boolean;
+  /** Paso del checkout (1 entrega, 2 pago, 3 confirmar) */
+  paso: PasoCheckout;
 }
+
+export type PasoCheckout = 1 | 2 | 3;
 
 export type OrdenListado = "relevancia" | "precio-asc" | "precio-desc" | "nombre";
 
@@ -30,18 +43,25 @@ export interface LineaTienda {
   cantidad: number;
   precio: number;
   subtotal: number;
+  /** Con existencia en la sucursal elegida: solo estas se cobran y van en el pedido */
+  disponible: boolean;
 }
 
 interface ValorTienda {
   indice: IndiceCatalogo | null;
   porId: Map<string, ProductoCatalogo>;
   cargando: boolean;
+  /** Vuelve a pedir el catálogo real (tras un fallo de red) */
+  reintentarCatalogo: () => void;
   ruta: Ruta;
   navegar: (cambios: Partial<Ruta>, opciones?: { reemplazar?: boolean }) => void;
   cantidades: Record<string, number>;
   lineas: LineaTienda[];
+  /** Líneas con existencia en la sucursal (las que se cobran) */
+  lineasCobrables: LineaTienda[];
   guardados: ProductoCatalogo[];
   totalArticulos: number;
+  /** Subtotal de las líneas con existencia */
   subtotal: number;
   agregar: (id: string, delta?: number) => void;
   fijarCantidad: (id: string, cantidad: number) => void;
@@ -69,6 +89,7 @@ const RUTA_INICIAL: Ruta = {
   pagina: 1,
   orden: "relevancia",
   soloDisponibles: true,
+  paso: 1,
 };
 
 const ORDENES: OrdenListado[] = ["relevancia", "precio-asc", "precio-desc", "nombre"];
@@ -80,6 +101,7 @@ function leerRuta(): Ruta {
   const vista: Vista = parametros.get("v") === "checkout" ? "checkout" : consulta ? "buscar" : departamento ? "listado" : "inicio";
   const orden = parametros.get("o");
   const pagina = Number(parametros.get("pg"));
+  const paso = Number(parametros.get("ps"));
   return {
     vista,
     departamento,
@@ -89,12 +111,14 @@ function leerRuta(): Ruta {
     pagina: Number.isInteger(pagina) && pagina > 0 ? pagina : 1,
     orden: ORDENES.includes(orden as OrdenListado) ? (orden as OrdenListado) : "relevancia",
     soloDisponibles: parametros.get("todos") !== "1",
+    paso: vista === "checkout" && (paso === 2 || paso === 3) ? paso : 1,
   };
 }
 
 function escribirRuta(ruta: Ruta): string {
   const parametros = new URLSearchParams();
   if (ruta.vista === "checkout") parametros.set("v", "checkout");
+  if (ruta.vista === "checkout" && ruta.paso > 1) parametros.set("ps", String(ruta.paso));
   if (ruta.consulta) parametros.set("q", ruta.consulta);
   if (ruta.departamento) parametros.set("d", ruta.departamento);
   if (ruta.categoria) parametros.set("c", ruta.categoria);
@@ -125,14 +149,25 @@ function guardarJson(clave: string, valor: unknown): void {
   }
 }
 
-const esCantidades = (v: unknown): v is Record<string, number> =>
-  typeof v === "object" && v !== null && Object.values(v).every((n) => typeof n === "number" && n > 0);
+/** Carrito guardado: se conservan solo las entradas válidas (enteros de 1 a 99), no se descarta todo */
+function leerCantidades(): Record<string, number> {
+  const crudo = leerJson<unknown>(CLAVE_CARRITO, {}, (v): v is unknown => true);
+  const limpio: Record<string, number> = {};
+  if (typeof crudo !== "object" || crudo === null || Array.isArray(crudo)) return limpio;
+  for (const [id, cantidad] of Object.entries(crudo)) {
+    if (typeof cantidad === "number" && Number.isFinite(cantidad) && cantidad >= 1) {
+      limpio[id] = Math.min(MAXIMO_POR_PRODUCTO, Math.round(cantidad));
+    }
+  }
+  return limpio;
+}
 const esListaIds = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === "string");
 const esEntrega = (v: unknown): v is Entrega =>
   typeof v === "object" &&
   v !== null &&
   ["delivery", "retiro"].includes((v as Entrega).modo) &&
-  ["costazul", "sambil"].includes((v as Entrega).sucursal);
+  ["costazul", "sambil"].includes((v as Entrega).sucursal) &&
+  ((v as Entrega).municipio === null || esMunicipioValido((v as Entrega).municipio));
 
 export function ProveedorTienda({ children }: { children: ReactNode }) {
   const [indice, setIndice] = useState<IndiceCatalogo | null>(null);
@@ -147,9 +182,17 @@ export function ProveedorTienda({ children }: { children: ReactNode }) {
 
   // Estado guardado y ruta actual (solo en el cliente)
   useEffect(() => {
-    setCantidades(leerJson(CLAVE_CARRITO, {}, esCantidades));
-    setIdsGuardados(leerJson(CLAVE_GUARDADOS, [], esListaIds));
-    setEntregaEstado(leerJson(CLAVE_ENTREGA, ENTREGA_INICIAL, esEntrega));
+    const leerGuardado = () => {
+      setCantidades(leerCantidades());
+      setIdsGuardados(leerJson(CLAVE_GUARDADOS, [], esListaIds));
+      setEntregaEstado(leerJson(CLAVE_ENTREGA, ENTREGA_INICIAL, esEntrega));
+    };
+    leerGuardado();
+    // Otra pestaña cambió el carrito o la entrega: se adopta su versión en vez de pisarla
+    const alCambiarAlmacenamiento = (evento: StorageEvent) => {
+      if (evento.key === null || [CLAVE_CARRITO, CLAVE_GUARDADOS, CLAVE_ENTREGA].includes(evento.key)) leerGuardado();
+    };
+    window.addEventListener("storage", alCambiarAlmacenamiento);
     rutaActual.current = leerRuta();
     setRuta(rutaActual.current);
     setListo(true);
@@ -165,6 +208,7 @@ export function ProveedorTienda({ children }: { children: ReactNode }) {
     return () => {
       activo = false;
       window.removeEventListener("popstate", alNavegar);
+      window.removeEventListener("storage", alCambiarAlmacenamiento);
     };
   }, []);
 
@@ -177,14 +221,25 @@ export function ProveedorTienda({ children }: { children: ReactNode }) {
 
   const navegar = useCallback((cambios: Partial<Ruta>, opciones?: { reemplazar?: boolean }) => {
     const siguiente = { ...rutaActual.current, ...cambios };
+    if (siguiente.vista !== "checkout") siguiente.paso = 1;
+    // Otra pantalla u otra búsqueda: orden, filtro y página vuelven a sus valores por defecto
+    if ("vista" in cambios || "consulta" in cambios || "departamento" in cambios) {
+      siguiente.orden = cambios.orden ?? "relevancia";
+      siguiente.soloDisponibles = cambios.soloDisponibles ?? true;
+      siguiente.pagina = cambios.pagina ?? 1;
+    }
     const url = escribirRuta(siguiente);
-    if (opciones?.reemplazar) window.history.replaceState(null, "", url);
-    else window.history.pushState(null, "", url);
-    rutaActual.current = siguiente;
-    setRuta(siguiente);
     // Cambio de pantalla (no solo abrir o cerrar la ficha): volver arriba
     const soloFicha = Object.keys(cambios).every((k) => k === "producto");
-    if (!soloFicha) window.scrollTo({ top: 0, behavior: "auto" });
+    // La entrada que abre una ficha se marca para que cerrarla vuelva atrás en vez de duplicar historial
+    const estado = soloFicha && siguiente.producto ? { ficha: true } : null;
+    // La misma URL otra vez (doble clic en "Inicio") no añade entradas repetidas al historial
+    const misma = url === `${window.location.pathname}${window.location.search}`;
+    if (opciones?.reemplazar || misma) window.history.replaceState(estado, "", url);
+    else window.history.pushState(estado, "", url);
+    rutaActual.current = siguiente;
+    setRuta(siguiente);
+    if (!soloFicha) window.scrollTo({ top: 0, behavior: "instant" });
   }, []);
 
   const porId = useMemo(() => {
@@ -200,12 +255,13 @@ export function ProveedorTienda({ children }: { children: ReactNode }) {
         const producto = porId.get(id);
         if (!producto) return [];
         const precio = precioEn(producto, sucursal);
-        return [{ producto, cantidad, precio, subtotal: Math.round(precio * cantidad * 100) / 100 }];
+        return [{ producto, cantidad, precio, subtotal: aCentimos(precio * cantidad) / 100, disponible: disponibleEn(producto, sucursal) }];
       }),
     [cantidades, porId, sucursal],
   );
+  const lineasCobrables = useMemo(() => lineas.filter((l) => l.disponible), [lineas]);
   const guardados = useMemo(() => idsGuardados.flatMap((id) => porId.get(id) ?? []), [idsGuardados, porId]);
-  const subtotal = Math.round(lineas.reduce((suma, l) => suma + l.subtotal, 0) * 100) / 100;
+  const subtotal = lineasCobrables.reduce((suma, l) => suma + aCentimos(l.subtotal), 0) / 100;
   const totalArticulos = lineas.reduce((suma, l) => suma + l.cantidad, 0);
 
   const fijarCantidad = useCallback((id: string, cantidad: number) => {
@@ -250,31 +306,44 @@ export function ProveedorTienda({ children }: { children: ReactNode }) {
     guardarJson(CLAVE_ENTREGA, nueva);
   }, []);
 
-  const valor: ValorTienda = {
-    indice,
-    porId,
-    cargando: indice === null,
-    ruta,
-    navegar,
-    cantidades,
-    lineas,
-    guardados,
-    totalArticulos,
-    subtotal,
-    agregar,
-    fijarCantidad,
-    quitar,
-    guardarParaDespues,
-    moverAlCarrito,
-    vaciar,
-    entrega,
-    setEntrega,
-    sucursal,
-    carritoAbierto,
-    setCarritoAbierto,
-    selectorEntregaAbierto,
-    setSelectorEntregaAbierto,
-  };
+  const reintentarCatalogo = useCallback(() => {
+    void cargarCatalogo(true).then(setIndice);
+  }, []);
+
+  const valor = useMemo<ValorTienda>(
+    () => ({
+      indice,
+      porId,
+      cargando: indice === null,
+      reintentarCatalogo,
+      ruta,
+      navegar,
+      cantidades,
+      lineas,
+      lineasCobrables,
+      guardados,
+      totalArticulos,
+      subtotal,
+      agregar,
+      fijarCantidad,
+      quitar,
+      guardarParaDespues,
+      moverAlCarrito,
+      vaciar,
+      entrega,
+      setEntrega,
+      sucursal,
+      carritoAbierto,
+      setCarritoAbierto,
+      selectorEntregaAbierto,
+      setSelectorEntregaAbierto,
+    }),
+    [
+      indice, porId, reintentarCatalogo, ruta, navegar, cantidades, lineas, lineasCobrables, guardados, totalArticulos,
+      subtotal, agregar, fijarCantidad, quitar, guardarParaDespues, moverAlCarrito, vaciar, entrega, setEntrega, sucursal,
+      carritoAbierto, selectorEntregaAbierto,
+    ],
+  );
 
   return <ContextoTienda.Provider value={valor}>{children}</ContextoTienda.Provider>;
 }

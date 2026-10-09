@@ -25,6 +25,22 @@ export const ENTREGA_INICIAL: Entrega = { modo: "delivery", municipio: null, suc
 /** Valores del prototipo: referenciales, a confirmar con SIGO */
 export const MINIMO_COMPRA_USD = 10;
 export const TASA_IGTF = 0.03;
+/** Tope de unidades por producto en el carrito */
+export const MAXIMO_POR_PRODUCTO = 99;
+
+/** USD -> céntimos enteros, para sumar y redondear sin errores de coma flotante */
+export function aCentimos(usd: number): number {
+  return Math.round(usd * 100);
+}
+
+/** IGTF sobre una base en USD, redondeado al céntimo (18,50 -> 0,56) */
+export function calcularIgtf(baseUsd: number): number {
+  return Math.round((aCentimos(baseUsd) * Math.round(TASA_IGTF * 100)) / 100) / 100;
+}
+
+export function esMunicipioValido(municipio: unknown): municipio is string {
+  return typeof municipio === "string" && TARIFAS_MUNICIPIO.some((t) => t.municipio === municipio);
+}
 
 /** Precio del producto en la sucursal que atiende el pedido */
 export function precioEn(producto: ProductoCatalogo, sucursal: ClaveSucursal): number {
@@ -58,7 +74,9 @@ export function contenidoDe(nombre: string): { cantidad: number; unidad: "kg" | 
 /** Precio por kg o por litro, para comparar presentaciones ("$2.40 /kg") */
 export function precioPorUnidad(producto: ProductoCatalogo, sucursal: ClaveSucursal): string | null {
   const contenido = contenidoDe(producto.nombre);
-  if (!contenido || contenido.cantidad === 1) return null;
+  // En farmacia "1G" es la dosis, no el contenido; y envases mínimos dan precios por kg sin sentido
+  const esFarmacia = /farmacia|salud|medic/i.test(`${producto.departamento ?? ""} ${producto.categoria}`);
+  if (!contenido || contenido.cantidad === 1 || contenido.cantidad < 0.01 || esFarmacia) return null;
   const valor = precioEn(producto, sucursal) / contenido.cantidad;
   if (!Number.isFinite(valor)) return null;
   return `$${valor.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} /${contenido.unidad}`;

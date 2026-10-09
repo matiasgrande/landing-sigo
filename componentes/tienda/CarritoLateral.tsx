@@ -4,28 +4,52 @@ import { useTienda, type LineaTienda } from "@/componentes/tienda/ContextoTienda
 import { Dialogo, ImagenProducto } from "@/componentes/tienda/Basicos";
 import { useTasa } from "@/componentes/ContextoTasa";
 import { IconoMas, IconoMenos, IconoWhatsApp, IconoMarcador } from "@/componentes/Iconos";
-import { MINIMO_COMPRA_USD, SUCURSALES_TIENDA, disponibleEn, tarifaDelivery, type Entrega } from "@/lib/tienda/comercio";
+import { useRef } from "react";
+import { MINIMO_COMPRA_USD, SUCURSALES_TIENDA, aCentimos, tarifaDelivery, type Entrega } from "@/lib/tienda/comercio";
 import { WHATSAPP_ATENCION, crearEnlaceWhatsApp } from "@/datos/contacto";
 import { formatearBs, formatearUsd } from "@/lib/useTasaBcv";
 
-export function mensajePedido(lineas: LineaTienda[], entrega: Entrega, total: number, encabezado = "¡Hola Sigo! Quiero hacer este pedido:"): string {
+export interface Totales {
+  subtotal: number;
+  /** null: municipio sin elegir */
+  envio: number | null;
+  igtf: number;
+  total: number;
+}
+
+/** Texto del pedido para WhatsApp: solo lo que tiene existencia, con el desglose del total */
+export function mensajePedido(lineas: LineaTienda[], entrega: Entrega, totales: Totales, encabezado = "¡Hola Sigo! Quiero hacer este pedido:"): string {
+  const cobrables = lineas.filter((l) => l.disponible);
   const destino =
     entrega.modo === "retiro"
       ? `Retiro en ${SUCURSALES_TIENDA[entrega.sucursal].corto}`
       : `Delivery a ${entrega.municipio ?? "(municipio por confirmar)"} desde ${SUCURSALES_TIENDA[entrega.sucursal].corto}`;
+  const envio =
+    entrega.modo === "retiro" ? "Retiro: gratis" : totales.envio === null ? "Envío: por confirmar" : `Envío: ${formatearUsd(totales.envio)}`;
   return [
     encabezado,
     "",
-    ...lineas.map((l) => `• ${l.cantidad} × ${l.producto.nombre} (${formatearUsd(l.subtotal)})`),
+    ...cobrables.map((l) => `• ${l.cantidad} × ${l.producto.nombre} (${formatearUsd(l.subtotal)})`),
     "",
     destino,
-    `Total referencial: ${formatearUsd(total)}`,
-  ].join("\n");
+    `Productos: ${formatearUsd(totales.subtotal)}`,
+    envio,
+    totales.igtf > 0 ? `IGTF (3 %): ${formatearUsd(totales.igtf)}` : "",
+    `Total referencial: ${formatearUsd(totales.total)}`,
+  ]
+    .filter((linea, i, todas) => linea !== "" || todas[i - 1] !== "")
+    .join("\n");
+}
+
+/** "1 artículo", "3 artículos" */
+export function plural(cantidad: number, singular: string, varios = `${singular}s`): string {
+  return `${cantidad.toLocaleString("es-VE")} ${cantidad === 1 ? singular : varios}`;
 }
 
 export function CarritoLateral() {
   const {
     lineas,
+    lineasCobrables,
     guardados,
     subtotal,
     totalArticulos,
@@ -33,6 +57,7 @@ export function CarritoLateral() {
     quitar,
     guardarParaDespues,
     moverAlCarrito,
+    vaciar,
     entrega,
     sucursal,
     carritoAbierto,
@@ -41,13 +66,20 @@ export function CarritoLateral() {
     navegar,
   } = useTienda();
   const { tasa } = useTasa();
+  const titulo = useRef<HTMLParagraphElement>(null);
   const envio = tarifaDelivery(entrega);
-  const total = subtotal + (envio ?? 0);
-  const faltante = Math.max(0, MINIMO_COMPRA_USD - subtotal);
-  const sinExistencia = lineas.filter((l) => !disponibleEn(l.producto, sucursal));
+  const total = (aCentimos(subtotal) + aCentimos(envio ?? 0)) / 100;
+  const faltante = Math.max(0, aCentimos(MINIMO_COMPRA_USD) - aCentimos(subtotal)) / 100;
+  const sinExistencia = lineas.filter((l) => !l.disponible);
+
+  /** Tras quitar una línea el botón desaparece: el foco va al resumen para no perderse en <body> */
+  function conFocoSeguro(accion: () => void) {
+    accion();
+    window.requestAnimationFrame(() => titulo.current?.focus());
+  }
 
   return (
-    <Dialogo abierto={carritoAbierto} alCerrar={() => setCarritoAbierto(false)} titulo={`Tu carrito (${totalArticulos})`} lado>
+    <Dialogo abierto={carritoAbierto} alCerrar={() => setCarritoAbierto(false)} titulo={`Tu carrito (${plural(totalArticulos, "artículo")})`} lado>
       <div className="flex min-h-full flex-col">
         {lineas.length === 0 ? (
           <div className="flex-1 p-6 text-center">
@@ -57,7 +89,7 @@ export function CarritoLateral() {
         ) : (
           <ul className="flex-1 divide-y divide-azul-100 px-4">
             {lineas.map((linea) => {
-              const disponible = disponibleEn(linea.producto, sucursal);
+              const disponible = linea.disponible;
               return (
                 <li key={linea.producto.id} className="flex gap-3 py-3">
                   <ImagenProducto producto={linea.producto} className="h-16 w-16 shrink-0 rounded-2xl ring-1 ring-azul/5" />
@@ -75,10 +107,10 @@ export function CarritoLateral() {
                     <p className="text-xs text-gris">{formatearUsd(linea.precio)} c/u</p>
                     {!disponible && (
                       <p className="mt-1 text-xs font-bold text-[#b4371c]">
-                        Sin existencia en {SUCURSALES_TIENDA[sucursal].corto}. Abre el producto para ver similares.
+                        Sin existencia en {SUCURSALES_TIENDA[sucursal].corto}: no se cobra ni va en el pedido. Abre el producto para ver similares.
                       </p>
                     )}
-                    <div className="mt-2 flex items-center gap-2">
+                    <div className="mt-2 flex flex-wrap items-center gap-x-2">
                       <div className="flex items-center rounded-full bg-crema">
                         <button
                           type="button"
@@ -101,19 +133,24 @@ export function CarritoLateral() {
                       </div>
                       <button
                         type="button"
-                        onClick={() => guardarParaDespues(linea.producto.id)}
+                        onClick={() => conFocoSeguro(() => guardarParaDespues(linea.producto.id))}
                         className="grid h-11 w-11 place-items-center rounded-full text-gris hover:bg-crema hover:text-azul"
                         aria-label={`Guardar ${linea.producto.nombre} para después`}
                         title="Guardar para después"
                       >
                         <IconoMarcador className="h-4 w-4" />
                       </button>
-                      <button type="button" onClick={() => quitar(linea.producto.id)} className="min-h-11 px-2 text-xs font-bold text-gris hover:text-[#b4371c]">
+                      <button
+                        type="button"
+                        onClick={() => conFocoSeguro(() => quitar(linea.producto.id))}
+                        className="min-h-11 px-2 text-xs font-bold text-gris hover:text-[#b4371c]"
+                        aria-label={`Quitar ${linea.producto.nombre} del carrito`}
+                      >
                         Quitar
                       </button>
                     </div>
                   </div>
-                  <p className="shrink-0 text-sm font-black text-azul">{formatearUsd(linea.subtotal)}</p>
+                  <p className={`shrink-0 text-sm font-black ${disponible ? "text-azul" : "text-gris line-through"}`}>{formatearUsd(linea.subtotal)}</p>
                 </li>
               );
             })}
@@ -123,8 +160,8 @@ export function CarritoLateral() {
         {guardados.length > 0 && (
           <div className="border-t border-azul-100 px-4 py-3">
             <p className="text-sm font-extrabold text-azul">Guardados para después ({guardados.length})</p>
-            <ul className="mt-2 space-y-2">
-              {guardados.slice(0, 5).map((producto) => (
+            <ul className="mt-2 max-h-56 space-y-2 overflow-y-auto">
+              {guardados.map((producto) => (
                 <li key={producto.id} className="flex items-center gap-2 text-sm">
                   <span className="min-w-0 flex-1 truncate">{producto.nombre}</span>
                   <button type="button" onClick={() => moverAlCarrito(producto.id)} className="min-h-11 shrink-0 px-2 font-extrabold text-verde">
@@ -137,7 +174,10 @@ export function CarritoLateral() {
         )}
 
         {/* Resumen fijo al pie */}
-        <div className="sticky bottom-0 mt-auto space-y-3 border-t border-azul-100 bg-white p-4">
+        <div className="sticky bottom-0 mt-auto space-y-3 border-t border-azul-100 bg-white p-4 [@media(max-height:640px)]:static">
+          <p ref={titulo} tabIndex={-1} className="sr-only" aria-live="polite">
+            {lineas.length === 0 ? "Carrito vacío" : `${plural(totalArticulos, "artículo")}, total ${formatearUsd(total)}`}
+          </p>
           {lineas.length > 0 && (
             <div>
               <div className="h-2 overflow-hidden rounded-full bg-azul-100" aria-hidden>
@@ -178,12 +218,13 @@ export function CarritoLateral() {
           <p className="text-xs text-gris">Pagos en divisas incluyen IGTF (3 %). Se calcula al elegir el método de pago.</p>
           {sinExistencia.length > 0 && (
             <p className="text-xs font-bold text-[#b4371c]">
-              {sinExistencia.length} producto(s) sin existencia en {SUCURSALES_TIENDA[sucursal].corto}.
+              {plural(sinExistencia.length, "producto")} sin existencia en {SUCURSALES_TIENDA[sucursal].corto}: no se incluye
+              {sinExistencia.length === 1 ? "" : "n"} en el total.
             </p>
           )}
           <button
             type="button"
-            disabled={lineas.length === 0 || faltante > 0}
+            disabled={lineasCobrables.length === 0 || faltante > 0}
             onClick={() => {
               setCarritoAbierto(false);
               navegar({ vista: "checkout", producto: null });
@@ -192,15 +233,26 @@ export function CarritoLateral() {
           >
             Continuar compra
           </button>
-          {lineas.length > 0 && (
+          {lineasCobrables.length > 0 && faltante === 0 && (
             <a
-              href={crearEnlaceWhatsApp(WHATSAPP_ATENCION, mensajePedido(lineas, entrega, total))}
+              href={crearEnlaceWhatsApp(WHATSAPP_ATENCION, mensajePedido(lineas, entrega, { subtotal, envio, igtf: 0, total }))}
               target="_blank"
               rel="noopener noreferrer"
               className="flex min-h-11 items-center justify-center gap-2 rounded-full text-sm font-extrabold text-verde ring-1 ring-verde/30 hover:bg-verde-100"
             >
               <IconoWhatsApp className="h-4 w-4" /> Enviar pedido por WhatsApp
             </a>
+          )}
+          {lineas.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm("¿Vaciar el carrito? Se quitarán todos los productos.")) conFocoSeguro(vaciar);
+              }}
+              className="min-h-11 w-full text-xs font-bold text-gris hover:text-[#b4371c]"
+            >
+              Vaciar carrito
+            </button>
           )}
         </div>
       </div>

@@ -4,7 +4,8 @@ import { useId, useState, type FormEvent } from "react";
 import { useTienda } from "@/componentes/tienda/ContextoTienda";
 import { interpretarPedido, MAXIMO_CARACTERES, type ResultadoInterpretacion } from "@/lib/interpretarPedido";
 import { IconoEnviar } from "@/componentes/Iconos";
-import { disponibleEn } from "@/lib/tienda/comercio";
+import { MAXIMO_POR_PRODUCTO, disponibleEn } from "@/lib/tienda/comercio";
+import { plural } from "@/componentes/tienda/CarritoLateral";
 
 export const ID_LISTA_RAPIDA = "lista-rapida";
 
@@ -12,7 +13,7 @@ const EJEMPLOS = ["2 harinas pan, 1 kg de arroz, aceite y café", "Para la parri
 
 /** "Escribe tu lista" dentro de la tienda: lo interpretado va directo al carrito */
 export function ListaRapida({ claro = false }: { claro?: boolean }) {
-  const { indice, agregar, setCarritoAbierto, sucursal } = useTienda();
+  const { indice, agregar, setCarritoAbierto, sucursal, cantidades } = useTienda();
   const [texto, setTexto] = useState("");
   const [resultado, setResultado] = useState<ResultadoInterpretacion | null>(null);
   const idCampo = useId();
@@ -22,8 +23,17 @@ export function ListaRapida({ claro = false }: { claro?: boolean }) {
     if (!limpio || !indice) return;
     try {
       const interpretado = interpretarPedido(limpio, indice, (producto) => disponibleEn(producto, sucursal));
-      interpretado.lineas.forEach((linea) => agregar(linea.producto.id, linea.cantidad));
-      setResultado(interpretado);
+      const avisos = [...interpretado.avisos];
+      const lineas = interpretado.lineas.flatMap((linea) => {
+        // Lo que de verdad cabe: el carrito tiene un tope por producto
+        const cabe = Math.max(0, MAXIMO_POR_PRODUCTO - (cantidades[linea.producto.id] ?? 0));
+        const agregada = Math.min(cabe, linea.cantidad);
+        if (agregada < linea.cantidad) avisos.push(`${linea.producto.nombre} ya está en el máximo de ${MAXIMO_POR_PRODUCTO} unidades.`);
+        if (agregada === 0) return [];
+        agregar(linea.producto.id, agregada);
+        return [{ ...linea, cantidad: agregada }];
+      });
+      setResultado({ ...interpretado, lineas, avisos });
       setTexto("");
     } catch {
       setResultado({ lineas: [], noEncontrados: [], avisos: ["No pudimos leer tu lista. Inténtalo de nuevo."] });
@@ -65,6 +75,11 @@ export function ListaRapida({ claro = false }: { claro?: boolean }) {
           <IconoEnviar className="h-5 w-5" />
         </button>
       </form>
+      {texto.length > MAXIMO_CARACTERES - 100 && (
+        <p className={`mt-1 text-right text-xs font-bold ${claro ? "text-white/90" : "text-gris"}`}>
+          {texto.length}/{MAXIMO_CARACTERES} caracteres
+        </p>
+      )}
 
       {!resultado && (
         <div className="mt-3 flex flex-wrap gap-2">
@@ -84,11 +99,13 @@ export function ListaRapida({ claro = false }: { claro?: boolean }) {
         </div>
       )}
 
+      {/* Región viva siempre montada: los lectores de pantalla anuncian cada resultado */}
+      <div aria-live="polite">
       {resultado && (
-        <div className="mt-3 rounded-3xl bg-white p-4 text-sm text-tinta ring-1 ring-azul/10" aria-live="polite">
+        <div className="mt-3 rounded-3xl bg-white p-4 text-sm text-tinta ring-1 ring-azul/10">
           {resultado.lineas.length > 0 ? (
             <>
-              <p className="font-extrabold text-verde">Agregamos {resultado.lineas.length} productos a tu carrito:</p>
+              <p className="font-extrabold text-verde">Agregamos {plural(resultado.lineas.length, "producto")} a tu carrito:</p>
               <ul className="mt-1 list-disc pl-5">
                 {resultado.lineas.map((l) => (
                   <li key={l.producto.id}>
@@ -120,6 +137,7 @@ export function ListaRapida({ claro = false }: { claro?: boolean }) {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
