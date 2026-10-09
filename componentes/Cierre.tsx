@@ -53,7 +53,7 @@ export function Cierre() {
           <Revelar>
             <a
               href={`${URL_ECOMMERCE}/unete`}
-              className="group flex h-full flex-col rounded-[2rem] bg-crema p-8 ring-1 ring-azul/5 transition hover:bg-azul-100"
+              className="group flex h-full min-w-0 flex-col rounded-[2rem] bg-crema p-8 [overflow-wrap:anywhere] ring-1 ring-azul/5 transition hover:bg-azul-100"
             >
               <p className="text-sm font-extrabold uppercase tracking-[0.18em] text-verde">¡Únete!</p>
               <h3 className="mt-3 text-3xl font-black text-azul">Trabaja con nosotros</h3>
@@ -66,7 +66,7 @@ export function Cierre() {
           <Revelar retraso={0.1}>
             <a
               href={`mailto:${CORREOS.atencion}?subject=${encodeURIComponent("Quiero ser proveedor de Sigo")}`}
-              className="group flex h-full flex-col rounded-[2rem] bg-crema p-8 ring-1 ring-azul/5 transition hover:bg-verde-100"
+              className="group flex h-full min-w-0 flex-col rounded-[2rem] bg-crema p-8 [overflow-wrap:anywhere] ring-1 ring-azul/5 transition hover:bg-verde-100"
             >
               <p className="text-sm font-extrabold uppercase tracking-[0.18em] text-verde">Proveedores</p>
               <h3 className="mt-3 text-3xl font-black text-azul">Lleva tu marca a Sigo</h3>

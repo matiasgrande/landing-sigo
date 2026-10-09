@@ -47,7 +47,9 @@ export function Comunidad() {
         // Solo aquí se activa el modo marquesina (duplicados + máscara); sin animación,
         // sin JS o en móvil queda una fila deslizable donde se ven todas las marcas
         const bloque = seccion.current?.querySelector<HTMLElement>("[data-bloque-marcas]");
+        const region = bloque?.querySelector<HTMLElement>("[role='region']");
         if (bloque) bloque.dataset.animada = "";
+        region?.removeAttribute("tabindex");
 
         // Marquesina infinita; el scroll la acelera momentáneamente
         const marquesina = gsap.to("[data-marquesina]", { xPercent: -50, duration: 40, ease: "none", repeat: -1 });
@@ -74,6 +76,7 @@ export function Comunidad() {
 
         return () => {
           if (bloque) delete bloque.dataset.animada;
+          region?.setAttribute("tabindex", "0");
         };
       });
     },
@@ -95,7 +98,7 @@ export function Comunidad() {
         <div className="mt-12 grid gap-4 md:grid-cols-3">
           {INICIATIVAS.map(({ Icono, etiqueta, titulo, texto, color }, indice) => (
             <Revelar key={titulo} retraso={indice * 0.1}>
-              <article className={`flex h-full flex-col rounded-[2rem] p-7 transition-transform duration-300 hover:-rotate-1 hover:scale-[1.02] ${color}`}>
+              <article className={`flex h-full min-w-0 flex-col rounded-[2rem] p-7 [overflow-wrap:anywhere] transition-transform duration-300 hover:-rotate-1 hover:scale-[1.02] ${color}`}>
                 <div className="flex items-center justify-between">
                   <Icono className="h-9 w-9" />
                   <span className="rounded-full bg-black/10 px-3 py-1 text-xs font-extrabold">{etiqueta}</span>

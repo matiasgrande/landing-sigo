@@ -68,7 +68,7 @@ function CalculadoraTarifa() {
       {seleccion && (
           <div ref={resultado} className="mt-6 flex flex-wrap items-end justify-between gap-4">
             <div>
-              <p className="text-6xl font-black tracking-tight text-verde">{formatearUsd(seleccion.tarifaUsd)}</p>
+              <p className="text-[clamp(44px,14vw,3.75rem)] font-black tracking-tight text-verde [overflow-wrap:anywhere]">{formatearUsd(seleccion.tarifaUsd)}</p>
               {tasa && <p className="mt-1 text-sm text-gris">{formatearBs(seleccion.tarifaUsd, tasa.valor)}</p>}
             </div>
             <p

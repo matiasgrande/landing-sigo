@@ -68,8 +68,9 @@ export function Encabezado() {
       mm.add(CON_MOVIMIENTO, () => {
         gsap
           .timeline()
-          .from(panelMenu.current, { autoAlpha: 0, y: -20, duration: 0.35 })
-          .from("[data-enlace-menu]", { autoAlpha: 0, x: -20, stagger: 0.05, duration: 0.4 }, "-=0.15");
+          // Solo opacidad: con autoAlpha (visibility:hidden) el foco no podría entrar al panel
+          .from(panelMenu.current, { opacity: 0, y: -20, duration: 0.35 })
+          .from("[data-enlace-menu]", { opacity: 0, x: -20, stagger: 0.05, duration: 0.4 }, "-=0.15");
       });
     },
     { dependencies: [menuAbierto], scope: cabecera },
@@ -119,8 +120,9 @@ export function Encabezado() {
     };
   }, [menuAbierto]);
 
+  // Medidas no textuales en px: con el texto ampliado solo crece el texto y la cabecera sigue cabiendo
   return (
-    <header ref={cabecera} className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5">
+    <header ref={cabecera} className="fixed inset-x-0 top-0 z-50 px-[12px] pt-[12px] sm:px-[20px]">
       <div
         ref={barraProgreso}
         className="fixed inset-x-0 top-0 hidden h-1 origin-left bg-gradient-to-r from-verde-vivo to-sol md:block"
@@ -128,12 +130,12 @@ export function Encabezado() {
       />
       <nav
         aria-label="Principal"
-        className={`nav-principal mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-full py-2 pl-3 pr-2 transition-all duration-300 sm:pl-4 ${
+        className={`nav-principal mx-auto flex max-w-6xl items-center justify-between gap-[12px] rounded-full py-[8px] pl-[12px] pr-[8px] transition-all duration-300 sm:pl-[16px] ${
           desplazado ? "bg-white shadow-lg shadow-azul/10" : "bg-white"
         }`}
       >
         <a href="#inicio" className="flex shrink-0 items-center" aria-label="SIGO, ir al inicio">
-          <Image src={logoSigo} alt="SIGO" width={44} height={44} priority className="h-10 w-10 sm:h-11 sm:w-11" />
+          <Image src={logoSigo} alt="SIGO" width={44} height={44} priority className="h-[40px] w-[40px] sm:h-[44px] sm:w-[44px]" />
         </a>
 
         <ul className="enlaces-principales hidden items-center gap-1 lg:flex">
@@ -149,14 +151,14 @@ export function Encabezado() {
           ))}
         </ul>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-[8px]">
           <PildoraTasa />
           <a
             href={URL_ECOMMERCE}
             aria-label="Compra online"
-            className="inline-flex shrink-0 items-center gap-2 rounded-full bg-verde px-4 py-2.5 text-sm font-extrabold text-white transition hover:bg-verde-vivo sm:px-5"
+            className="inline-flex shrink-0 items-center gap-[8px] rounded-full bg-verde px-[16px] py-[10px] text-sm font-extrabold text-white transition hover:bg-verde-vivo sm:px-[20px]"
           >
-            <IconoCarrito className="h-4 w-4" />
+            <IconoCarrito className="h-[16px] w-[16px]" />
             {/* Se oculta si la cabecera no tiene espacio (pantallas de 280 px o texto ampliado) */}
             <span className="texto-compra" aria-hidden>
               Compra online
@@ -167,7 +169,7 @@ export function Encabezado() {
             type="button"
             data-boton-menu
             onClick={() => setMenuAbierto(true)}
-            className="boton-menu grid h-11 w-11 shrink-0 place-items-center rounded-full text-azul hover:bg-azul-100 lg:hidden"
+            className="boton-menu grid h-[44px] w-[44px] shrink-0 place-items-center rounded-full text-azul hover:bg-azul-100 lg:hidden"
             aria-label="Abrir menú"
             aria-expanded={menuAbierto}
           >

@@ -25,7 +25,7 @@ export function Revelar({ children, retraso = 0, className, desplazamiento = 32,
           opacity: 0,
           y: desplazamiento,
           delay: retraso,
-          scrollTrigger: { trigger: referencia.current, start: "top 95%", once: true },
+          scrollTrigger: { trigger: referencia.current, start: "top bottom", once: true },
         });
       });
     },

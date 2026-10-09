@@ -33,6 +33,13 @@ body {
   overflow-x: clip;
 }
 
+/* Con texto muy ampliado, una palabra larga de un título se parte en vez de desbordar la página */
+h1,
+h2,
+h3 {
+  overflow-wrap: anywhere;
+}
+
 /* Las anclas no quedan ocultas bajo la cabecera fija */
 section[id],
 form[id] {
@@ -65,11 +72,11 @@ form[id] {
   visibility: hidden;
 }
 
-/* Cabecera: decide según su ancho real en rem, así también se adapta al texto ampliado */
+/* Cabecera: decide según su ancho en em (crece con el texto ampliado; rem usaría siempre 16 px) */
 .nav-principal {
   container-type: inline-size;
 }
-@container (max-width: 18rem) {
+@container (max-width: 18em) {
   .texto-compra {
     position: absolute;
     width: 1px;
@@ -79,7 +86,7 @@ form[id] {
     white-space: nowrap;
   }
 }
-@container (max-width: 58rem) {
+@container (max-width: 58em) {
   .enlaces-principales {
     display: none;
   }

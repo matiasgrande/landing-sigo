@@ -24,7 +24,7 @@ function Contador({ valor }: { valor: number }) {
         onUpdate: () => {
           elemento.textContent = String(contador.actual);
         },
-        scrollTrigger: { trigger: elemento, start: "top 92%", once: true },
+        scrollTrigger: { trigger: elemento, start: "top bottom", once: true },
       });
       // Al revertir (cambio de preferencia o desmontaje) se restaura el valor real
       return () => {

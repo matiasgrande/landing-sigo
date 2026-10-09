@@ -167,7 +167,7 @@ export function Hero() {
             <IconoUbicacion className="h-4 w-4 text-sol" />
             Isla de Margarita · {anios} años contigo
           </p>
-          <h1 className="text-[clamp(2.9rem,10vw,6.2rem)] font-black leading-[0.92] tracking-tight">
+          <h1 className="text-[clamp(46px,10vw,6.2rem)] font-black leading-[0.92] tracking-tight">
             <span className="sr-only">SIGO Supermercados: </span>
             {PALABRAS_TITULO.map((palabra) => (
               <span key={palabra} data-hero="palabra" className="mr-[0.22em] inline-block">

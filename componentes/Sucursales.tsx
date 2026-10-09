@@ -272,7 +272,7 @@ export function Sucursales() {
                   </div>
                 )}
                 <div className="flex flex-1 flex-col p-6">
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
                     <span className="flex flex-wrap gap-1.5">
                       {[sucursal.formato, ...(sucursal.formatosAdicionales ?? [])].map((formato) => (
                         <span key={formato} className={`rounded-full px-3 py-1 text-xs font-extrabold ${ESTILO_FORMATO[formato]}`}>

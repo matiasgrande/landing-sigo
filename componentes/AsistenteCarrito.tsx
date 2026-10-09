@@ -54,15 +54,37 @@ function textoTasa(tasa: TasaBcv): string {
 /** Id del formulario: "Mi lista" de la barra móvil lleva aquí y enfoca el campo */
 export const ID_FORMULARIO_LISTA = "escribe-tu-lista";
 
-function unirCarrito(actual: LineaPedido[], nuevas: LineaPedido[]): LineaPedido[] {
-  const resultado = actual.map((linea) => ({ ...linea }));
+interface Union {
+  carrito: LineaPedido[];
+  /** Productos que realmente cambiaron (nuevos o con más cantidad) */
+  agregados: number;
+  avisos: string[];
+}
+
+function unirCarrito(actual: LineaPedido[], nuevas: LineaPedido[]): Union {
+  const carrito = actual.map((linea) => ({ ...linea }));
+  const avisos: string[] = [];
+  let agregados = 0;
   for (const nueva of nuevas) {
-    const existente = resultado.find((l) => l.producto.id === nueva.producto.id);
-    // Respeta el tope por producto también al sumar varias listas
-    if (existente) existente.cantidad = Math.min(existente.cantidad + nueva.cantidad, maximoPara(existente.producto));
-    else resultado.push(nueva);
+    const existente = carrito.find((l) => l.producto.id === nueva.producto.id);
+    if (!existente) {
+      carrito.push(nueva);
+      agregados++;
+      continue;
+    }
+    // Respeta el tope por producto también al sumar varias listas, y lo avisa
+    const maximo = maximoPara(existente.producto);
+    const unidad = existente.producto.unidad === "kg" ? " kg" : "";
+    if (existente.cantidad >= maximo) {
+      avisos.push(`Ya tienes el máximo de ${existente.producto.nombre} (${maximo}${unidad}).`);
+      continue;
+    }
+    const suma = existente.cantidad + nueva.cantidad;
+    if (suma > maximo) avisos.push(`Ajusté ${existente.producto.nombre} al máximo de ${maximo}${unidad}.`);
+    existente.cantidad = Math.min(suma, maximo);
+    agregados++;
   }
-  return resultado;
+  return { carrito, agregados, avisos };
 }
 
 function crearMensajeWhatsApp(carrito: LineaPedido[], total: number, tasa: TasaBcv | null): string {
@@ -86,6 +108,7 @@ export function AsistenteCarrito() {
   const [escribiendo, setEscribiendo] = useState(false);
   const contenedorMensajes = useRef<HTMLDivElement>(null);
   const campo = useRef<HTMLTextAreaElement>(null);
+  const carritoActual = useRef<LineaPedido[]>([]);
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
   const siguienteId = useRef(1);
   const idCampo = useId();
@@ -135,6 +158,10 @@ export function AsistenteCarrito() {
     { dependencies: [carrito], scope: seccion },
   );
 
+  useEffect(() => {
+    carritoActual.current = carrito;
+  }, [carrito]);
+
   const total = carrito.reduce((suma, linea) => suma + calcularSubtotal(linea), 0);
   const totalArticulos = carrito.length;
 
@@ -179,13 +206,16 @@ export function AsistenteCarrito() {
       let respuesta: string;
       try {
         const { lineas, noEncontrados, avisos } = interpretarPedido(limpio);
-        if (lineas.length > 0) setCarrito((actual) => unirCarrito(actual, lineas));
+        // Se une contra el carrito vigente (ref) para saber qué entró de verdad y avisarlo
+        const union = unirCarrito(carritoActual.current, lineas);
+        if (union.agregados > 0) setCarrito(union.carrito);
 
         const partes: string[] = [];
-        if (lineas.length > 0) {
-          partes.push(`Listo, agregué ${pluralizar(lineas.length, "producto", "productos")} a tu carrito.`);
+        if (union.agregados > 0) {
+          partes.push(`Listo, agregué ${pluralizar(union.agregados, "producto", "productos")} a tu carrito.`);
         }
-        partes.push(...avisos);
+        // Sin duplicar el aviso de tope que ya dio el intérprete para el mismo producto
+        partes.push(...avisos, ...union.avisos.filter((aviso) => !avisos.includes(aviso)));
         if (noEncontrados.length > 0) {
           partes.push(
             `No encontré: ${noEncontrados.map((n) => `"${n}"`).join(", ")}. Prueba con otro nombre o escríbelo más simple.`,
@@ -342,7 +372,7 @@ export function AsistenteCarrito() {
 
           {/* Carrito */}
           <div className="flex min-h-[24rem] min-w-0 flex-col rounded-[2rem] bg-azul p-5 text-white shadow-xl shadow-azul/20 sm:p-6 lg:h-[34rem]">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <p className="flex items-center gap-2 text-lg font-black">
                 <IconoCarrito className="h-5 w-5 text-sol" /> Tu carrito
               </p>
