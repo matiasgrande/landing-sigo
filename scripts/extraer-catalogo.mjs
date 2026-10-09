@@ -110,11 +110,15 @@ function leerProductos(html) {
   return productos;
 }
 
-/** Recorre todas las páginas de una categoría */
+/**
+ * Recorre las páginas de una categoría. Las categorías padre repiten los productos de sus
+ * hijas en decenas de páginas: de ellas solo se lee la primera, por si tienen productos propios.
+ */
 async function extraerCategoria(categoria) {
   const productos = [];
   const vistos = new Set();
-  for (let pagina = 1; pagina <= MAX_PAGINAS; pagina++) {
+  const limitePaginas = categoria.esHoja ? MAX_PAGINAS : 1;
+  for (let pagina = 1; pagina <= limitePaginas; pagina++) {
     const url = `${BASE}${encodeURI(categoria.ruta)}?pagenumber=${pagina}`;
     const html = await descargar(url);
     const nuevos = leerProductos(html).filter((p) => !vistos.has(p.id));
@@ -164,11 +168,17 @@ async function principal() {
       }
       hechas++;
       if (hechas % 10 === 0) console.log(`  ${hechas}/${hojas.length + padres.length} categorías · ${catalogo.size} productos`);
+      if (hechas % 25 === 0) await guardar(catalogo, categorias, errores, inicio);
       await esperar(PAUSA_MS);
     }
   }
   await Promise.all(Array.from({ length: CONCURRENCIA }, trabajador));
 
+  await guardar(catalogo, categorias, errores, inicio, true);
+}
+
+/** Escribe el JSON (también a mitad de camino, para no perder el avance) */
+async function guardar(catalogo, categorias, errores, inicio, final = false) {
   const productos = [...catalogo.values()]
     .filter((p) => p.precioUsd !== null)
     .sort((a, b) => a.id - b.id);
@@ -182,6 +192,7 @@ async function principal() {
   const destino = path.join(process.cwd(), "datos", "catalogo-sigo.json");
   await mkdir(path.dirname(destino), { recursive: true });
   await writeFile(destino, JSON.stringify(salida));
+  if (!final) return;
   console.log(`Listo: ${productos.length} productos en ${Math.round((Date.now() - inicio) / 1000)} s → ${destino}`);
   if (errores.length) console.log(`Errores (${errores.length}):\n${errores.slice(0, 20).join("\n")}`);
 }
