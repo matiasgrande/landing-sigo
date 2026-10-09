@@ -153,6 +153,8 @@ export function buscarEnIndice(
     candidatos
       .filter((c) => c.puntaje === mejor.puntaje)
       .every((c) => c.entrada.producto.categoria === mejor.entrada.producto.categoria);
+  // Coincidencia parcial y débil ("i want rice" -> "Vainilla Bean"): mejor decir que no se encontró
+  if (!mejor.conPrincipal && mejor.enNombre < palabras.length) return { tipo: "ninguno" };
   if (!mejor.conPrincipal && !marcaClara) {
     return { tipo: "ambiguo", opciones: candidatos.slice(0, 3).map((c) => c.entrada.producto) };
   }

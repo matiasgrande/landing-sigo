@@ -100,7 +100,12 @@ export function formatearBs(montoUsd: number, tasa: number): string {
 export function formatearFechaTasa(fecha: string): string {
   const valor = new Date(fecha);
   if (Number.isNaN(valor.getTime())) return "";
-  return valor.toLocaleDateString("es-VE", { day: "2-digit", month: "2-digit", timeZone: "America/Caracas" });
+  // Una fecha sin hora (o a medianoche UTC) es un día de calendario: en hora de Caracas caería el día anterior
+  const soloDia = /^\d{4}-\d{2}-\d{2}(T00:00(:00(\.0+)?)?(Z|[+-]00:?00)?)?$/.test(fecha.trim());
+  const partes = new Intl.DateTimeFormat("es-VE", { day: "2-digit", month: "2-digit", timeZone: soloDia ? "UTC" : "America/Caracas" }).formatToParts(valor);
+  const dia = partes.find((p) => p.type === "day")?.value.padStart(2, "0") ?? "";
+  const mes = partes.find((p) => p.type === "month")?.value.padStart(2, "0") ?? "";
+  return dia && mes ? `${dia}/${mes}` : "";
 }
 
 export function formatearUsd(monto: number): string {

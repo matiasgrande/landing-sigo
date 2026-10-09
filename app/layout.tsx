@@ -96,9 +96,9 @@ export default function DisenoRaiz({ children }: Readonly<{ children: ReactNode 
           }}
         />
         {/* Sin JS: la barra inferior y el botón de WhatsApp quedan visibles para navegar,
-            y se oculta el botón de menú porque no puede abrirse */}
+            y se ocultan el botón de menú y el formulario del asistente porque no pueden funcionar */}
         <noscript>
-          <style>{"[data-barra],[data-flotante]{visibility:visible}[data-boton-menu]{display:none}"}</style>
+          <style>{"[data-barra],[data-flotante]{visibility:visible}[data-boton-menu],form#escribe-tu-lista{display:none}"}</style>
         </noscript>
         <a
           href="#contenido"

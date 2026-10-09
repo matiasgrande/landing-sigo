@@ -47,7 +47,7 @@ function BarraInferior() {
 
   const boton = "flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-2xl text-[0.7rem] font-extrabold text-azul active:bg-azul-100";
   return (
-    <nav aria-label="Accesos rápidos de la tienda" className="fixed inset-x-3 bottom-3 z-30 grid grid-cols-4 rounded-3xl bg-white p-1.5 shadow-xl shadow-azul/20 ring-1 ring-azul/10 md:hidden">
+    <nav aria-label="Accesos rápidos de la tienda" className="fixed inset-x-3 bottom-3 z-30 grid grid-cols-4 [@media(max-height:480px)_and_(orientation:landscape)]:hidden rounded-3xl bg-white p-1.5 shadow-xl shadow-azul/20 ring-1 ring-azul/10 md:hidden">
       <button type="button" className={boton} onClick={() => navegar({ vista: "inicio", departamento: null, categoria: null, consulta: null, producto: null })}>
         <IconoCasa className="h-5 w-5" /> Inicio
       </button>

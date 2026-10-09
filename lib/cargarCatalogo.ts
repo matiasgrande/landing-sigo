@@ -10,7 +10,8 @@ const TIENDAS: Record<string, string> = {
   c: "https://costazul.sigo.com.ve",
   s: "https://sambil.sigo.com.ve",
 };
-const LIMITE_ESPERA_MS = 15000;
+// Pasado este tiempo se responde con la demo (y se reintenta luego) en vez de dejar al usuario esperando
+const LIMITE_ESPERA_MS = 8000;
 
 /** Formato compacto (v2) generado por scripts/preparar-catalogo-asistente.mjs */
 type FilaProducto = [

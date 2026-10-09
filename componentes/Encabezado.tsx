@@ -54,7 +54,7 @@ export function Encabezado() {
       ScrollTrigger.create({
         start: 24,
         end: "max",
-        onToggle: (instancia) => setDesplazado(instancia.isActive),
+        onToggle: (instancia) => setDesplazado(instancia.scroll() >= instancia.start),
       });
     },
     { scope: cabecera },

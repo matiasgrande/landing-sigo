@@ -34,6 +34,9 @@ const PALABRAS_VACIAS = new Set([
   "gramos", "litro", "litros", "lt", "l", "paquete", "paquetes", "bolsa", "bolsas", "lata", "latas",
   "unidad", "unidades", "und", "porfa", "pls", "menos", "caja", "cajas", "carton", "cartones",
   "docena", "docenas", "paca", "pacas", "bulto", "bultos", "pack", "packs",
+  // Saludos y cortesía: "Hola buenas, quiero arroz" no debe buscar "hola"
+  "hola", "buenas", "buenos", "buen", "dia", "dias", "tardes", "noches", "gracias", "saludos", "oye", "hey",
+  "ml", "cc", "lts",
 ]);
 
 const UNIDADES_GRAMOS = /\b(\d+(?:\.\d+)?)\s*(g|gr|grs|gramos?)\b/;
@@ -223,7 +226,10 @@ export function interpretarPedido(
   const avisos: string[] = [];
 
   for (const fragmento of fragmentos) {
-    const busqueda = buscarEnIndice(palabrasDelFragmento(aplicarSinonimos(fragmento)), indice, estaDisponible);
+    const palabras = palabrasDelFragmento(aplicarSinonimos(fragmento));
+    // Solo saludos o relleno ("hola buenas"): no es un producto ni algo "no encontrado"
+    if (palabras.length === 0) continue;
+    const busqueda = buscarEnIndice(palabras, indice, estaDisponible);
     if (busqueda.tipo === "ninguno") {
       noEncontrados.push(recortar(fragmento));
       continue;
@@ -238,15 +244,47 @@ export function interpretarPedido(
     // tamaño deja de contarse como cantidad
     let textoCantidad = fragmento;
     const litros = litrosPedidos(fragmento);
+    let litrosAConvertir: number | null = null;
     if (litros !== null) {
-      const conTamano = [producto, ...alternativas].find((p) => litrosDelEnvase(p.nombre) === litros && estaDisponible(p));
-      if (conTamano) {
+      // 1) Entre las opciones empatadas; 2) en todo el catálogo con las mismas palabras
+      const conTamano =
+        [producto, ...alternativas].find((p) => litrosDelEnvase(p.nombre) === litros && estaDisponible(p)) ??
+        indice.entradas
+          .filter((e) => palabras.every((w) => e.nombre.has(w)) && litrosDelEnvase(e.producto.nombre) === litros && estaDisponible(e.producto))
+          .sort((a, b) => a.producto.precioUsd - b.producto.precioUsd)[0]?.producto;
+      const sinTamano = fragmento.replace(PRESENTACION_LIQUIDA, " ");
+      // 3) Sin ese tamaño ni envase líquido elegido: el envase líquido más grande que no se pase
+      const liquido =
+        litrosDelEnvase(producto.nombre) === null
+          ? indice.entradas
+              .map((e) => ({ producto: e.producto, envase: litrosDelEnvase(e.producto.nombre), coincide: palabras.every((w) => e.nombre.has(w)) }))
+              .filter((c) => c.coincide && c.envase !== null && c.envase <= litros && estaDisponible(c.producto))
+              .sort((a, b) => (b.envase ?? 0) - (a.envase ?? 0) || a.producto.precioUsd - b.producto.precioUsd)[0]?.producto
+          : undefined;
+      if (!conTamano && liquido && !/\b\d/.test(sinTamano)) {
+        alternativas = [producto, ...alternativas].filter((p) => p.id !== liquido.id);
+        producto = liquido;
+        litrosAConvertir = litros;
+        textoCantidad = sinTamano;
+      } else if (conTamano) {
         alternativas = [producto, ...alternativas].filter((p) => p.id !== conTamano.id);
         producto = conTamano;
-        textoCantidad = fragmento.replace(PRESENTACION_LIQUIDA, " ");
+        textoCantidad = sinTamano;
+      } else if (!/\b\d/.test(sinTamano) && litrosDelEnvase(producto.nombre) !== null) {
+        // "refresco 2 litros" sin envase de 2 L: se calculan envases del tamaño elegido
+        litrosAConvertir = litros;
+        textoCantidad = sinTamano;
+      } else {
+        avisos.push(`No encontré ${recortar(fragmento)} en esa presentación; agregué ${producto.nombre.replace(/\.$/, "")}.`);
       }
     }
     let cantidad = extraerCantidad(textoCantidad, producto);
+    const envase = litrosDelEnvase(producto.nombre);
+    if (litrosAConvertir !== null && envase && cantidad.tipo === "valida") {
+      const envases = Math.min(MAXIMO_UNIDADES, Math.max(1, Math.round(litrosAConvertir / envase)));
+      cantidad = { tipo: "valida", valor: envases, ajustada: false };
+      avisos.push(`Para ${litrosAConvertir.toLocaleString("es-VE")} L agregué ${envases} × ${producto.nombre.replace(/\.$/, "")}.`);
+    }
     // "6 cervezas" no son 6 cajas de 36: si se piden varias unidades y el elegido es un multipack,
     // se prefiere una alternativa individual; si no la hay, se calcula cuántos packs hacen falta
     const unidadesPack = unidadesDelPack(producto.nombre);

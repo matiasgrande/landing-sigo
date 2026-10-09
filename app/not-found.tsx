@@ -6,7 +6,10 @@ import { URL_TIENDA } from "@/datos/contacto";
 
 export const metadata: Metadata = {
   title: "Página no encontrada · SIGO Supermercados",
+  description: "Esta página no existe. Vuelve al inicio de SIGO Supermercados o haz tu mercado online.",
   robots: { index: false },
+  // No hereda la tarjeta para compartir de la página principal
+  openGraph: { title: "Página no encontrada · SIGO Supermercados", url: undefined },
   // La 404 no debe declararse como la página principal
   alternates: { canonical: null },
 };
@@ -14,7 +17,7 @@ export const metadata: Metadata = {
 /** 404 en español, con salida a la landing y a la tienda online */
 export default function NoEncontrada() {
   return (
-    <main className="grid min-h-dvh place-items-center bg-crema px-5 py-16 text-center">
+    <main id="contenido" className="grid min-h-dvh place-items-center bg-crema px-5 py-16 text-center">
       <div className="max-w-md">
         <Image src={logoSigo} alt="SIGO" width={72} height={72} className="mx-auto h-18 w-18" priority />
         <p className="mt-8 text-sm font-extrabold uppercase tracking-[0.18em] text-verde">Error 404</p>

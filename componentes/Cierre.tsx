@@ -147,7 +147,7 @@ export function Cierre() {
             <ul className="mt-4 space-y-3 text-sm">
               {Object.values(CORREOS).map((correo) => (
                 <li key={correo}>
-                  <a href={`mailto:${correo}`} className="flex items-center gap-2 break-all hover:text-white">
+                  <a href={`mailto:${correo}`} className="flex min-h-6 items-center gap-2 py-1 break-all hover:text-white">
                     <IconoCorreo className="h-4 w-4 shrink-0" /> {correo}
                   </a>
                 </li>
@@ -176,7 +176,7 @@ export function Cierre() {
                 <IconoFacebook className="h-5 w-5" />
               </a>
             </div>
-            <a href={URL_ECOMMERCE} className="mt-6 inline-block text-sm font-bold text-sol hover:underline">
+            <a href={URL_ECOMMERCE} className="mt-6 inline-block py-1 text-sm font-bold text-sol hover:underline">
               sigo.com.ve →
             </a>
           </div>

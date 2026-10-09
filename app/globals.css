@@ -44,7 +44,11 @@ h3 {
   overflow-wrap: anywhere;
 }
 
-/* Las anclas no quedan ocultas bajo la cabecera fija */
+/* Lo que recibe foco o se ancla no queda tapado por la cabecera fija */
+html {
+  scroll-padding-top: 6rem;
+}
+
 section[id],
 form[id] {
   scroll-margin-top: 5rem;
@@ -57,10 +61,17 @@ form[id] {
   }
 }
 
-/* El contorno sigue la forma del elemento (outline respeta border-radius); no se fuerza un radio */
+/* Foco visible con contraste ≥3:1 en cualquier fondo: azul con halo blanco en fondos claros,
+   amarillo en los oscuros. El contorno sigue la forma del elemento (no se fuerza un radio) */
 :focus-visible {
-  outline: 3px solid var(--color-sol);
+  outline: 3px solid var(--color-azul);
   outline-offset: 3px;
+  box-shadow: 0 0 0 6px #fff;
+}
+:is(.bg-azul, .bg-azul-900, .bg-verde, .bg-verde-700, .bg-coral-700, .bg-tinta)
+  :focus-visible:not(:is(.bg-white, .bg-crema, .bg-azul-100, .bg-verde-100) *) {
+  outline-color: var(--color-sol);
+  box-shadow: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

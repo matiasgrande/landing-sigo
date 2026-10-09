@@ -446,6 +446,15 @@ export function AsistenteCarrito() {
               ))}
             </div>
 
+            <noscript>
+              <p className="border-t border-azul-100 p-3 text-sm font-bold text-azul">
+                El asistente necesita JavaScript. Puedes hacer tu mercado en la{" "}
+                <a href={URL_TIENDA} className="text-verde underline">
+                  tienda online
+                </a>
+                .
+              </p>
+            </noscript>
             <form id={ID_FORMULARIO_LISTA} onSubmit={alEnviar} className="flex items-end gap-2 border-t border-azul-100 p-3">
               <label htmlFor={idCampo} className="sr-only">
                 Escribe tu lista de compras
@@ -584,7 +593,7 @@ export function AsistenteCarrito() {
                   {tasa && total > 0 && <p className="text-xs text-white/60">{formatearBs(total, tasa.valor)} · {textoTasa(tasa)}</p>}
                 </div>
               </div>
-              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-2 sm:grid-cols-2">
                 <a
                   href={
                     carrito.length > 0
@@ -594,7 +603,7 @@ export function AsistenteCarrito() {
                   aria-disabled={carrito.length === 0}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`inline-flex items-center justify-center gap-2 rounded-full px-4 py-3 font-extrabold transition ${
+                  className={`inline-flex min-w-0 items-center justify-center gap-2 rounded-full px-4 py-3 text-center font-extrabold transition [overflow-wrap:anywhere] ${
                     carrito.length > 0 ? "bg-verde hover:bg-verde-700" : "pointer-events-none bg-white/10 text-white/40"
                   }`}
                 >
@@ -603,7 +612,7 @@ export function AsistenteCarrito() {
                 <a
                   href={URL_TIENDA}
                   onClick={llevarCarritoATienda}
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-4 py-3 font-extrabold text-azul transition hover:bg-sol"
+                  className="inline-flex min-w-0 items-center justify-center gap-2 rounded-full bg-white px-4 py-3 text-center font-extrabold text-azul transition [overflow-wrap:anywhere] hover:bg-sol"
                 >
                   <IconoCarrito className="h-5 w-5" /> Seguir en la tienda
                 </a>
