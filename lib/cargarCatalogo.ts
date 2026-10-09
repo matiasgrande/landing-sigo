@@ -3,12 +3,17 @@ import { crearIndice, palabrasClave, type IndiceCatalogo } from "@/lib/indiceCat
 
 const RUTA_BASE = process.env.NEXT_PUBLIC_RUTA_BASE ?? "";
 const URL_CATALOGO = `${RUTA_BASE}/catalogo-asistente.json`;
-const URL_IMAGENES = "https://www.sigo.com.ve/images/thumbs/";
-const URL_TIENDA = "https://www.sigo.com.ve/";
+// Tienda activa (www.sigo.com.ve está desactualizada); las imágenes se sirven desde cualquier subdominio
+const URL_IMAGENES = "https://costazul.sigo.com.ve/images/thumbs/";
+/** Inicial de la tienda en el enlace compacto -> dominio */
+const TIENDAS: Record<string, string> = {
+  c: "https://costazul.sigo.com.ve",
+  s: "https://sambil.sigo.com.ve",
+};
 const LIMITE_ESPERA_MS = 15000;
 
 /** Formato compacto generado por scripts/preparar-catalogo-asistente.mjs */
-type FilaProducto = [id: number, nombre: string, precioUsd: number, categoria: number, imagen: string | null, disponible: 0 | 1, ruta: string];
+type FilaProducto = [id: number, nombre: string, precioUsd: number, categoria: number, imagen: string | null, disponible: 0 | 1, enlace: string | null];
 
 interface CatalogoCompacto {
   extraidoEn: string;
@@ -38,12 +43,13 @@ export function seVendePorKg(nombre: string): boolean {
 /** Presentación tomada del nombre: "Arroz Integral Mary 800 Gr." -> "800 Gr." */
 function presentacionDe(nombre: string, porKg: boolean): string {
   if (porKg) return "por kg";
-  const medida = /\d[\d.,]*\s*(?:x\s*\d[\d.,]*\s*)?(?:kgs?|grs?|g|ml|lts?|l|cc|oz|und|unds|unid|pzas?|mts?|cm|rollos?|hojas?)\b\.?/i.exec(nombre);
+  const medida = /\d[\d.,]*\s*(?:x\s*\d[\d.,]*\s*)?(?:kgs?|k|grs?|g|ml|lts?|l|cc|oz|und|unds|unid|pzas?|mts?|cm|rollos?|hojas?)\b\.?/i.exec(nombre);
   return medida ? medida[0].trim() : "unidad";
 }
 
 function adaptar(datos: CatalogoCompacto): ProductoCatalogo[] {
-  return datos.productos.map(([id, nombre, precioUsd, categoria, imagen, disponible, ruta]) => {
+  return datos.productos.map(([id, nombre, precioUsd, categoria, imagen, disponible, enlace]) => {
+    const tienda = enlace ? TIENDAS[enlace.charAt(0)] : undefined;
     const porKg = seVendePorKg(nombre);
     return {
       id: String(id),
@@ -54,7 +60,7 @@ function adaptar(datos: CatalogoCompacto): ProductoCatalogo[] {
       categoria: datos.categorias[categoria] ?? "",
       claves: palabrasClave(nombre),
       imagen: imagen ? URL_IMAGENES + imagen : undefined,
-      ruta: URL_TIENDA + ruta.replace(/^\//, ""),
+      ruta: tienda && enlace ? tienda + enlace.slice(1) : undefined,
       disponible: disponible === 1,
     };
   });

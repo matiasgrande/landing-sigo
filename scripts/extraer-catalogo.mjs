@@ -1,4 +1,6 @@
-// Extrae el catálogo público de https://www.sigo.com.ve (nopCommerce) para el prototipo.
+// Extrae el catálogo público de las tiendas en línea de SIGO (nopCommerce multitienda) para el prototipo.
+// www.sigo.com.ve está desactualizada: las tiendas activas son costazul. y sambil., que comparten
+// los IDs de producto pero tienen precio y disponibilidad propios. Se combinan por ID.
 // Uso: NODE_USE_ENV_PROXY=1 node scripts/extraer-catalogo.mjs
 // Salida: datos/catalogo-sigo.json (completo). Luego: node scripts/preparar-catalogo-asistente.mjs
 //
@@ -8,7 +10,10 @@
 import { writeFile, mkdir } from "node:fs/promises";
 import path from "node:path";
 
-const BASE = "https://www.sigo.com.ve";
+const TIENDAS = [
+  { clave: "costazul", nombre: "Sigo Supermarket Costazul", base: "https://costazul.sigo.com.ve" },
+  { clave: "sambil", nombre: "Sigo Supermarket Sambil", base: "https://sambil.sigo.com.ve" },
+];
 const PAUSA_MS = 350;
 const CONCURRENCIA = 3;
 const MAX_PAGINAS = 80;
@@ -95,7 +100,10 @@ function leerProductos(html) {
     const precio = /class="price actual-price">\s*\$?([\d.,]+)/.exec(bloque)?.[1];
     const precioAnterior = /class="price old-price">\s*\$?([\d.,]+)/.exec(bloque)?.[1];
     const descripcion = /<div class="description">([\s\S]*?)<\/div>/.exec(bloque)?.[1];
-    const agotado = /Shopping-cart-add-disabled|out-of-stock|Agotado/i.test(bloque);
+    // Cada producto trae un <style> con la clase "Shopping-cart-add-disabled"; lo que indica
+    // disponibilidad es el botón "Añadir al carrito" (los no disponibles dicen "Próximamente")
+    const fichaProducto = bloque.split(/<div class="item-box"/)[0] ?? bloque;
+    const disponible = fichaProducto.includes("product-box-add-to-cart-button");
     productos.push({
       id: Number(id),
       nombre: decodificar(enlace[2] ?? ""),
@@ -104,7 +112,7 @@ function leerProductos(html) {
       precioUsd: precio ? Number(precio.replace(/,/g, "")) : null,
       precioAnteriorUsd: precioAnterior ? Number(precioAnterior.replace(/,/g, "")) : null,
       descripcion: descripcion ? decodificar(descripcion.replace(/<[^>]+>/g, " ")) : "",
-      disponible: !agotado,
+      disponible,
     });
   }
   return productos;
@@ -114,12 +122,12 @@ function leerProductos(html) {
  * Recorre las páginas de una categoría. Las categorías padre repiten los productos de sus
  * hijas en decenas de páginas: de ellas solo se lee la primera, por si tienen productos propios.
  */
-async function extraerCategoria(categoria) {
+async function extraerCategoria(base, categoria) {
   const productos = [];
   const vistos = new Set();
   const limitePaginas = categoria.esHoja ? MAX_PAGINAS : 1;
   for (let pagina = 1; pagina <= limitePaginas; pagina++) {
-    const url = `${BASE}${encodeURI(categoria.ruta)}?pagenumber=${pagina}`;
+    const url = `${base}${encodeURI(categoria.ruta)}?pagenumber=${pagina}`;
     const html = await descargar(url);
     const nuevos = leerProductos(html).filter((p) => !vistos.has(p.id));
     if (nuevos.length === 0) break;
@@ -134,58 +142,86 @@ async function extraerCategoria(categoria) {
 
 async function principal() {
   const inicio = Date.now();
-  const portada = await descargar(BASE + "/");
-  const categorias = leerCategorias(portada);
-  const hojas = categorias.filter((c) => c.esHoja);
-  const padres = categorias.filter((c) => !c.esHoja);
-  console.log(`Categorías: ${categorias.length} (${hojas.length} finales)`);
-
   const catalogo = new Map();
   const errores = [];
-  // Primero las finales (dan la ruta más específica); luego los padres por si tienen productos propios
-  const cola = [...hojas, ...padres];
-  let hechas = 0;
+  let categorias = [];
 
-  async function trabajador() {
-    while (cola.length) {
-      const categoria = cola.shift();
-      if (!categoria) break;
-      try {
-        const productos = await extraerCategoria(categoria);
-        for (const producto of productos) {
-          const existente = catalogo.get(producto.id);
+  for (const tienda of TIENDAS) {
+    const portada = await descargar(tienda.base + "/");
+    const deLaTienda = leerCategorias(portada);
+    if (categorias.length === 0) categorias = deLaTienda;
+    const hojas = deLaTienda.filter((c) => c.esHoja);
+    const padres = deLaTienda.filter((c) => !c.esHoja);
+    console.log(`${tienda.nombre}: ${deLaTienda.length} categorías (${hojas.length} finales)`);
+
+    // Primero las finales (dan la ruta más específica); luego los padres por si tienen productos propios
+    const cola = [...hojas, ...padres];
+    let hechas = 0;
+
+    async function trabajador() {
+      while (cola.length) {
+        const categoria = cola.shift();
+        if (!categoria) break;
+        try {
+          const productos = await extraerCategoria(tienda.base, categoria);
           const camino = [...categoria.ancestros, categoria.nombre];
-          if (existente) {
-            if (!existente.categorias.some((c) => c.join("/") === camino.join("/")) && categoria.esHoja) {
+          for (const producto of productos) {
+            const { precioUsd, precioAnteriorUsd, disponible, ruta, ...comunes } = producto;
+            const existente = catalogo.get(producto.id) ?? { ...comunes, categorias: [], tiendas: {} };
+            if (categoria.esHoja && !existente.categorias.some((c) => c.join("/") === camino.join("/"))) {
               existente.categorias.push(camino);
             }
-          } else {
-            catalogo.set(producto.id, { ...producto, categorias: [camino] });
+            if (existente.categorias.length === 0) existente.categorias.push(camino);
+            if (!existente.tiendas[tienda.clave]) {
+              existente.tiendas[tienda.clave] = { precioUsd, precioAnteriorUsd, disponible, url: tienda.base + ruta };
+            }
+            catalogo.set(producto.id, existente);
           }
+        } catch (error) {
+          errores.push(String(error instanceof Error ? error.message : error));
         }
-      } catch (error) {
-        errores.push(String(error instanceof Error ? error.message : error));
+        hechas++;
+        if (hechas % 20 === 0) console.log(`  ${tienda.clave}: ${hechas}/${cola.length + hechas} · ${catalogo.size} productos`);
+        if (hechas % 40 === 0) await guardar(catalogo, categorias, errores, inicio);
+        await esperar(PAUSA_MS);
       }
-      hechas++;
-      if (hechas % 10 === 0) console.log(`  ${hechas}/${hojas.length + padres.length} categorías · ${catalogo.size} productos`);
-      if (hechas % 25 === 0) await guardar(catalogo, categorias, errores, inicio);
-      await esperar(PAUSA_MS);
     }
+    await Promise.all(Array.from({ length: CONCURRENCIA }, trabajador));
   }
-  await Promise.all(Array.from({ length: CONCURRENCIA }, trabajador));
 
   await guardar(catalogo, categorias, errores, inicio, true);
+}
+
+/**
+ * Precio y disponibilidad que se muestran: los de la primera tienda donde está disponible
+ * (Costazul primero); si no está disponible en ninguna, los de la primera donde aparece.
+ */
+function consolidar(producto) {
+  const ofertas = TIENDAS.map((t) => ({ clave: t.clave, ...producto.tiendas[t.clave] })).filter((o) => o.precioUsd > 0);
+  const elegida = ofertas.find((o) => o.disponible) ?? ofertas[0];
+  if (!elegida) return null;
+  return {
+    ...producto,
+    precioUsd: elegida.precioUsd,
+    precioAnteriorUsd: elegida.precioAnteriorUsd,
+    disponible: ofertas.some((o) => o.disponible),
+    tienda: elegida.clave,
+    url: elegida.url,
+  };
 }
 
 /** Escribe el JSON (también a mitad de camino, para no perder el avance) */
 async function guardar(catalogo, categorias, errores, inicio, final = false) {
   const productos = [...catalogo.values()]
-    .filter((p) => p.precioUsd !== null)
+    .map(consolidar)
+    // Sin precio publicado (aparecen en $0) no sirven para armar un carrito
+    .filter((p) => p !== null)
     .sort((a, b) => a.id - b.id);
   const salida = {
-    fuente: BASE,
+    fuente: TIENDAS.map((t) => t.base),
     extraidoEn: new Date().toISOString(),
     totalProductos: productos.length,
+    disponibles: productos.filter((p) => p.disponible).length,
     categorias: categorias.map(({ nombre, ruta, ancestros, esHoja }) => ({ nombre, ruta, ancestros, esHoja })),
     productos,
   };
@@ -193,7 +229,7 @@ async function guardar(catalogo, categorias, errores, inicio, final = false) {
   await mkdir(path.dirname(destino), { recursive: true });
   await writeFile(destino, JSON.stringify(salida));
   if (!final) return;
-  console.log(`Listo: ${productos.length} productos en ${Math.round((Date.now() - inicio) / 1000)} s → ${destino}`);
+  console.log(`Listo: ${productos.length} productos (${salida.disponibles} disponibles) en ${Math.round((Date.now() - inicio) / 1000)} s → ${destino}`);
   if (errores.length) console.log(`Errores (${errores.length}):\n${errores.slice(0, 20).join("\n")}`);
 }
 

@@ -32,9 +32,10 @@ interface Mensaje {
   texto: string;
 }
 
+// Probadas contra el catálogo real de las tiendas Costazul y Sambil (el hielo no se vende en línea)
 const SUGERENCIAS = [
-  "2 harinas pan, medio kilo de queso blanco y una docena de huevos",
-  "Para la parrilla: 2 kg de carne, carbón, 12 cervezas y hielo",
+  "2 harinas pan, medio kilo de queso blanco y 6 cervezas polar",
+  "Para la parrilla: 2 kg de carne, carbón y 12 cervezas",
   "Arroz, pasta, aceite, café y 1 kg de pollo",
 ];
 
@@ -203,7 +204,7 @@ export function AsistenteCarrito() {
           cargar();
         }
       },
-      { rootMargin: "800px 0px" },
+      { rootMargin: "300px 0px" },
     );
     observador.observe(elemento);
     return () => {
@@ -499,7 +500,9 @@ export function AsistenteCarrito() {
                                   className="max-w-[11rem] truncate rounded-lg bg-white/10 px-1.5 py-1 text-xs font-semibold text-white"
                                   aria-label={`Cambiar ${linea.producto.nombre} por otra opción`}
                                 >
-                                  <option value="">{linea.alternativas.length} opciones…</option>
+                                  <option value="">
+                                    {linea.alternativas.length === 1 ? "1 opción…" : `${linea.alternativas.length} opciones…`}
+                                  </option>
                                   {linea.alternativas.map((alternativa) => (
                                     <option key={alternativa.id} value={alternativa.id} className="text-tinta">
                                       {alternativa.nombre} · {formatearUsd(alternativa.precioUsd)}
@@ -583,8 +586,9 @@ export function AsistenteCarrito() {
         </Revelar>
 
         <p className="mt-4 text-center text-xs text-gris">
-          Demostración con precios referenciales. En producción el asistente se conectará al catálogo e inventario
-          reales del e-commerce.
+          {indice?.origen === "real" && indice.extraidoEn
+            ? `Prototipo con los productos y precios publicados en sigo.com.ve el ${new Date(indice.extraidoEn).toLocaleDateString("es-VE", { day: "2-digit", month: "2-digit", year: "numeric" })}. En producción se conectará al inventario en vivo del e-commerce.`
+            : "Demostración con precios referenciales. En producción el asistente se conectará al catálogo e inventario reales del e-commerce."}
         </p>
       </div>
     </section>

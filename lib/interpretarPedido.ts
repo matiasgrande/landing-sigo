@@ -101,6 +101,47 @@ function extraerCantidad(fragmento: string, producto: ProductoCatalogo): Cantida
   return { tipo: "valida", valor: Math.max(1, Math.round(cantidad)), ajustada };
 }
 
+/** Peso pedido en gramos ("2 kg", "medio kilo", "500 gr"); null si no se pidió por peso */
+export function pesoPedidoEnGramos(fragmento: string): number | null {
+  const kilos = /\b(\d+(?:\.\d+)?|[a-z]+)?\s*(?:kg|kgs|kilos?)\b/.exec(fragmento);
+  if (kilos) {
+    const valor = kilos[1];
+    const numero = valor === undefined ? 1 : /^\d/.test(valor) ? Number(valor) : NUMEROS_EN_TEXTO[valor] ?? 1;
+    return Number.isFinite(numero) && numero > 0 ? numero * 1000 : null;
+  }
+  const gramos = UNIDADES_GRAMOS.exec(fragmento);
+  return gramos?.[1] ? Number(gramos[1]) : null;
+}
+
+/** Peso del paquete según su nombre: "Carne Molida 400 Gr" -> 400; "Arroz 1 Kg" -> 1000 */
+export function pesoDelPaqueteEnGramos(nombre: string): number | null {
+  const medida = /(\d+(?:[.,]\d+)?)\s*(kgs?|k|grs?|g)\b/i.exec(nombre);
+  if (!medida?.[1] || !medida[2]) return null;
+  const valor = Number(medida[1].replace(",", "."));
+  if (!Number.isFinite(valor) || valor <= 0) return null;
+  return medida[2].toLowerCase().startsWith("k") ? valor * 1000 : valor;
+}
+
+/** Formas venezolanas de pedir que no coinciden con el nombre del catálogo */
+const SINONIMOS: [RegExp, string][] = [
+  [/\bharinas? (?:pan|p a n|p\.a\.n\.?)\b/g, "harina maiz"],
+  [/\bpasta dental\b/g, "crema dental"],
+  [/\bpapel (?:toilet|tualet|de bano)\b/g, "papel higienico"],
+  [/\bgaseosas?\b/g, "refresco"],
+  [/\bcaraotas? negras?\b/g, "caraota negra"],
+];
+
+function aplicarSinonimos(fragmento: string): string {
+  return SINONIMOS.reduce((texto, [patron, reemplazo]) => texto.replace(patron, reemplazo), fragmento);
+}
+
+/** Unidades de un multipack según su nombre: "Cerveza Polar (36 Unidades)" -> 36 */
+export function unidadesDelPack(nombre: string): number | null {
+  const pack = /(\d+)\s*(?:unidades|und|unds|unid|pack|uds)\b/i.exec(nombre);
+  const unidades = pack?.[1] ? Number(pack[1]) : null;
+  return unidades && unidades > 1 ? unidades : null;
+}
+
 /** Palabras del fragmento que describen el producto (sin cantidades ni relleno) */
 function palabrasDelFragmento(fragmento: string): string[] {
   return normalizarParaBuscar(
@@ -124,7 +165,7 @@ function recortar(texto: string, maximo = 40): string {
  */
 export function interpretarPedido(texto: string, indice: IndiceCatalogo): ResultadoInterpretacion {
   const fragmentos = unirMedios(normalizarTexto(texto.slice(0, MAXIMO_CARACTERES)))
-    .split(/[,;\n+]+|\s+y\s+|\s+tambien\s+/)
+    .split(/[,;:\n+]+|\s+y\s+|\s+tambien\s+/)
     .map((f) => f.trim())
     .filter((f) => f.length > 0);
 
@@ -133,7 +174,7 @@ export function interpretarPedido(texto: string, indice: IndiceCatalogo): Result
   const avisos: string[] = [];
 
   for (const fragmento of fragmentos) {
-    const busqueda = buscarEnIndice(palabrasDelFragmento(fragmento), indice);
+    const busqueda = buscarEnIndice(palabrasDelFragmento(aplicarSinonimos(fragmento)), indice);
     if (busqueda.tipo === "ninguno") {
       noEncontrados.push(recortar(fragmento));
       continue;
@@ -143,8 +184,35 @@ export function interpretarPedido(texto: string, indice: IndiceCatalogo): Result
       avisos.push(`Con "${recortar(fragmento)}", ¿te refieres a ${opciones}? Escríbelo más específico.`);
       continue;
     }
-    const { producto, alternativas } = busqueda;
-    const cantidad = extraerCantidad(fragmento, producto);
+    let { producto, alternativas } = busqueda;
+    let cantidad = extraerCantidad(fragmento, producto);
+    // "6 cervezas" no son 6 cajas de 36: si se piden varias unidades y el elegido es un multipack,
+    // se prefiere una alternativa individual; si no la hay, se calcula cuántos packs hacen falta
+    const unidadesPack = unidadesDelPack(producto.nombre);
+    const pidePack = /\b(caja|cajas|pack|packs|bulto|bultos|paca|pacas)\b/.test(fragmento);
+    if (cantidad.tipo === "valida" && cantidad.valor > 1 && unidadesPack && !pidePack) {
+      const individual = alternativas.find((a) => !unidadesDelPack(a.nombre) && a.disponible !== false);
+      if (individual) {
+        alternativas = [producto, ...alternativas.filter((a) => a.id !== individual.id)];
+        producto = individual;
+      } else if (cantidad.valor >= unidadesPack) {
+        // Solo se vende en packs (p. ej. papel higiénico): "2 papel" son 2 paquetes, pero
+        // "48 cervezas" con cajas de 36 son 2 cajas
+        const packs = Math.ceil(cantidad.valor / unidadesPack);
+        avisos.push(`Para ${cantidad.valor} unidades agregué ${packs} × ${producto.nombre.replace(/\.$/, "")}.`);
+        cantidad = { tipo: "valida", valor: packs, ajustada: false };
+      }
+    }
+    // Pedido por peso de un producto que se vende en paquetes: "2 kg de carne" -> 5 paquetes de 400 g
+    const pesoPedido = producto.unidad === "unidad" ? pesoPedidoEnGramos(fragmento) : null;
+    const pesoPaquete = pesoPedido ? pesoDelPaqueteEnGramos(producto.nombre) : null;
+    if (cantidad.tipo === "valida" && pesoPedido && pesoPaquete && pesoPedido !== pesoPaquete) {
+      const paquetes = Math.max(1, Math.round(pesoPedido / pesoPaquete));
+      const ajustada = paquetes > MAXIMO_UNIDADES;
+      cantidad = { tipo: "valida", valor: Math.min(paquetes, MAXIMO_UNIDADES), ajustada };
+      const pedido = pesoPedido >= 1000 ? `${(pesoPedido / 1000).toLocaleString("es-VE")} kg` : `${pesoPedido} g`;
+      avisos.push(`Para ${pedido} de ${producto.nombre.split(/\s\d/)[0]} agregué ${cantidad.valor} paquete${cantidad.valor === 1 ? "" : "s"}.`);
+    }
     if (cantidad.tipo === "invalida") {
       avisos.push(`¿Cuánto ${producto.nombre} quieres? La cantidad debe ser mayor que cero.`);
       continue;

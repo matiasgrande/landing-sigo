@@ -5,7 +5,8 @@
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-const PREFIJO_IMAGEN = "https://www.sigo.com.ve/images/thumbs/";
+// Las imágenes se sirven igual desde cualquier subdominio de la tienda
+const PREFIJO_IMAGEN = /^https:\/\/[a-z]+\.sigo\.com\.ve\/images\/thumbs\//;
 
 async function principal() {
   const origen = path.join(process.cwd(), "datos", "catalogo-sigo.json");
@@ -22,8 +23,10 @@ async function principal() {
       indiceCategoria.set(nombreCategoria, categorias.length);
       categorias.push(nombreCategoria);
     }
-    const imagen = typeof p.imagen === "string" && p.imagen.startsWith(PREFIJO_IMAGEN) ? p.imagen.slice(PREFIJO_IMAGEN.length) : null;
-    return [p.id, p.nombre, p.precioUsd, indiceCategoria.get(nombreCategoria), imagen, p.disponible ? 1 : 0, p.ruta];
+    const imagen = typeof p.imagen === "string" && PREFIJO_IMAGEN.test(p.imagen) ? p.imagen.replace(PREFIJO_IMAGEN, "") : null;
+    // URL compacta: inicial de la tienda + ruta ("c/arroz-mary-1-k" -> costazul.sigo.com.ve/arroz-mary-1-k)
+    const enlace = typeof p.url === "string" ? `${(p.tienda ?? "costazul")[0]}${new URL(p.url).pathname}` : null;
+    return [p.id, p.nombre, p.precioUsd, indiceCategoria.get(nombreCategoria), imagen, p.disponible ? 1 : 0, enlace];
   });
 
   const salida = { extraidoEn: datos.extraidoEn, categorias, productos };

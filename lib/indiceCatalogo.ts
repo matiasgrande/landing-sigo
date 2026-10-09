@@ -83,11 +83,15 @@ interface Candidato {
   entrada: EntradaIndice;
   puntaje: number;
   enNombre: number;
+  /** Alguna palabra pedida coincide con el sustantivo principal del producto, o con su
+   * nombre y su categoría a la vez ("pollo" en "Alas de Pollo", categoría Pollo) */
+  conPrincipal: boolean;
 }
 
 /**
  * Busca el producto que mejor coincide con las palabras escritas.
- * Puntaje por palabra: sustantivo principal 3, resto del nombre 2, categoría 1.
+ * Puntaje por palabra: sustantivo principal 3, resto del nombre 2, categoría 1. La primera
+ * palabra pedida suele ser el tipo de producto: si es el sustantivo principal suma 1 más.
  * Desempate: nombre más específico (más palabras cubiertas), disponible y más económico.
  */
 export function buscarEnIndice(palabras: string[], indice: IndiceCatalogo, maxAlternativas = 5): ResultadoBusqueda {
@@ -98,23 +102,27 @@ export function buscarEnIndice(palabras: string[], indice: IndiceCatalogo, maxAl
   for (const entrada of indice.entradas) {
     let puntaje = 0;
     let enNombre = 0;
-    for (const opciones of variantesPorPalabra) {
+    let conPrincipal = false;
+    for (const [posicion, opciones] of variantesPorPalabra.entries()) {
       if (opciones.some((v) => entrada.principal.has(v))) {
-        puntaje += 3;
+        puntaje += posicion === 0 ? 4 : 3;
         enNombre++;
+        conPrincipal = true;
       } else if (opciones.some((v) => entrada.nombre.has(v))) {
         puntaje += 2;
         enNombre++;
+        if (opciones.some((v) => entrada.categoria.has(v))) conPrincipal = true;
       } else if (opciones.some((v) => entrada.categoria.has(v))) {
         puntaje += 1;
       }
     }
-    if (puntaje > 0) candidatos.push({ entrada, puntaje, enNombre });
+    if (puntaje > 0) candidatos.push({ entrada, puntaje, enNombre, conPrincipal });
   }
   if (candidatos.length === 0) return { tipo: "ninguno" };
 
   candidatos.sort(
     (a, b) =>
+      Number(b.conPrincipal) - Number(a.conPrincipal) ||
       b.puntaje - a.puntaje ||
       b.enNombre / b.entrada.totalPalabras - a.enNombre / a.entrada.totalPalabras ||
       Number(b.entrada.producto.disponible ?? true) - Number(a.entrada.producto.disponible ?? true) ||
@@ -123,8 +131,9 @@ export function buscarEnIndice(palabras: string[], indice: IndiceCatalogo, maxAl
 
   const [mejor] = candidatos;
   if (!mejor) return { tipo: "ninguno" };
-  // Solo coincidió la categoría (ninguna palabra del nombre): mejor preguntar que adivinar
-  if (mejor.enNombre === 0) {
+  // Lo pedido no es el producto principal de ninguno ("huevos" solo aparece en "Pasta al huevo"):
+  // mejor preguntar que adivinar
+  if (!mejor.conPrincipal) {
     return { tipo: "ambiguo", opciones: candidatos.slice(0, 3).map((c) => c.entrada.producto) };
   }
   const alternativas = candidatos
