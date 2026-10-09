@@ -1,8 +1,11 @@
-import { CATALOGO_DEMO, type ProductoCatalogo } from "@/datos/catalogo";
+import type { ProductoCatalogo } from "@/datos/catalogo";
+import { buscarEnIndice, normalizarParaBuscar, type IndiceCatalogo } from "@/lib/indiceCatalogo";
 
 export interface LineaPedido {
   producto: ProductoCatalogo;
   cantidad: number;
+  /** Otras opciones igual de válidas (marca o presentación), para "Cambiar" en el carrito */
+  alternativas?: ProductoCatalogo[];
 }
 
 export interface ResultadoInterpretacion {
@@ -59,14 +62,6 @@ function unirMedios(texto: string): string {
     .replace(/\b(\d+(?:\.\d+)?|[a-z]+)\s+y\s+medi[oa]\b/g, (c: string, v: string) => sumarMedio(c, v));
 }
 
-/** Variantes singulares simples: "tomates" -> "tomate", "limones" -> "limon" */
-function variantes(palabra: string): string[] {
-  const resultado = [palabra];
-  if (palabra.length > 3 && palabra.endsWith("es")) resultado.push(palabra.slice(0, -2));
-  if (palabra.length > 2 && palabra.endsWith("s")) resultado.push(palabra.slice(0, -1));
-  return resultado;
-}
-
 type Cantidad = { tipo: "valida"; valor: number; ajustada: boolean } | { tipo: "invalida" };
 
 function extraerCantidad(fragmento: string, producto: ProductoCatalogo): Cantidad {
@@ -106,42 +101,16 @@ function extraerCantidad(fragmento: string, producto: ProductoCatalogo): Cantida
   return { tipo: "valida", valor: Math.max(1, Math.round(cantidad)), ajustada };
 }
 
-type Busqueda =
-  | { tipo: "encontrado"; producto: ProductoCatalogo }
-  | { tipo: "ambiguo"; opciones: ProductoCatalogo[] }
-  | { tipo: "ninguno" };
-
-function buscarProducto(fragmento: string): Busqueda {
-  const palabras = fragmento
+/** Palabras del fragmento que describen el producto (sin cantidades ni relleno) */
+function palabrasDelFragmento(fragmento: string): string[] {
+  return normalizarParaBuscar(
+    fragmento
+      .split(/\s+/)
+      .filter((p) => p.length > 0 && !PALABRAS_VACIAS.has(p) && !/^\d/.test(p) && !(p in NUMEROS_EN_TEXTO))
+      .join(" "),
+  )
     .split(/\s+/)
-    .filter((p) => p.length > 0 && !PALABRAS_VACIAS.has(p) && !/^\d/.test(p) && !(p in NUMEROS_EN_TEXTO));
-  if (palabras.length === 0) return { tipo: "ninguno" };
-
-  let mejor: ProductoCatalogo | null = null;
-  let mejorPuntaje = 0;
-  let empatados: ProductoCatalogo[] = [];
-
-  for (const producto of CATALOGO_DEMO) {
-    let puntaje = 0;
-    for (const palabra of palabras) {
-      const coincide = variantes(palabra).find((v) => producto.claves.includes(v));
-      if (!coincide) continue;
-      // La primera clave es el sustantivo principal y pesa el doble
-      puntaje += producto.claves[0] === coincide ? 2 : 1;
-    }
-    if (puntaje > mejorPuntaje) {
-      mejor = producto;
-      mejorPuntaje = puntaje;
-      empatados = [producto];
-    } else if (puntaje > 0 && puntaje === mejorPuntaje) {
-      empatados.push(producto);
-    }
-  }
-  if (!mejor) return { tipo: "ninguno" };
-  // Solo coincidió una palabra secundaria en productos distintos (p. ej. "soda"): hay que preguntar
-  const nombres = new Set(empatados.map((p) => p.nombre));
-  if (mejorPuntaje < 2 && nombres.size > 1) return { tipo: "ambiguo", opciones: empatados };
-  return { tipo: "encontrado", producto: mejor };
+    .filter((p) => p.length > 1);
 }
 
 /** Recorta textos largos para repetirlos en el chat */
@@ -153,7 +122,7 @@ function recortar(texto: string, maximo = 40): string {
  * Convierte una lista escrita en lenguaje natural en líneas de carrito.
  * Ej.: "2 harinas pan, medio kilo de queso y una docena de huevos"
  */
-export function interpretarPedido(texto: string): ResultadoInterpretacion {
+export function interpretarPedido(texto: string, indice: IndiceCatalogo): ResultadoInterpretacion {
   const fragmentos = unirMedios(normalizarTexto(texto.slice(0, MAXIMO_CARACTERES)))
     .split(/[,;\n+]+|\s+y\s+|\s+tambien\s+/)
     .map((f) => f.trim())
@@ -164,7 +133,7 @@ export function interpretarPedido(texto: string): ResultadoInterpretacion {
   const avisos: string[] = [];
 
   for (const fragmento of fragmentos) {
-    const busqueda = buscarProducto(fragmento);
+    const busqueda = buscarEnIndice(palabrasDelFragmento(fragmento), indice);
     if (busqueda.tipo === "ninguno") {
       noEncontrados.push(recortar(fragmento));
       continue;
@@ -174,7 +143,7 @@ export function interpretarPedido(texto: string): ResultadoInterpretacion {
       avisos.push(`Con "${recortar(fragmento)}", ¿te refieres a ${opciones}? Escríbelo más específico.`);
       continue;
     }
-    const { producto } = busqueda;
+    const { producto, alternativas } = busqueda;
     const cantidad = extraerCantidad(fragmento, producto);
     if (cantidad.tipo === "invalida") {
       avisos.push(`¿Cuánto ${producto.nombre} quieres? La cantidad debe ser mayor que cero.`);
@@ -186,7 +155,11 @@ export function interpretarPedido(texto: string): ResultadoInterpretacion {
     if (cantidad.ajustada || suma > maximo) {
       avisos.push(`Ajusté ${producto.nombre} al máximo de ${maximo}${producto.unidad === "kg" ? " kg" : ""}.`);
     }
-    acumulado.set(producto.id, { producto, cantidad: Math.min(suma, maximo) });
+    acumulado.set(producto.id, {
+      producto,
+      cantidad: Math.min(suma, maximo),
+      ...(alternativas.length > 0 && { alternativas }),
+    });
   }
 
   return { lineas: [...acumulado.values()], noEncontrados, avisos };

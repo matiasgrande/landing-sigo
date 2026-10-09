@@ -9,8 +9,12 @@ export interface ProductoCatalogo {
   precioUsd: number;
   unidad: UnidadVenta;
   categoria: string;
-  /** Palabras clave normalizadas (sin acentos, singular) */
+  /** Palabras clave normalizadas (sin acentos, singular); la primera es el sustantivo principal */
   claves: string[];
+  /** Datos del catálogo real de sigo.com.ve (ausentes en la demostración) */
+  imagen?: string;
+  ruta?: string;
+  disponible?: boolean;
 }
 
 export const CATALOGO_DEMO: readonly ProductoCatalogo[] = [
