@@ -11,6 +11,7 @@ import {
   CORREOS,
   REDES,
   ANIO_FUNDACION,
+  ANIO_ACTUAL,
   crearEnlaceWhatsApp,
 } from "@/datos/contacto";
 import { Revelar } from "@/componentes/Revelar";
@@ -180,7 +181,7 @@ export function Cierre() {
           </div>
         </div>
         <p className="mx-auto mt-14 max-w-6xl border-t border-white/10 pt-6 text-xs text-white/50">
-          © {new Date().getFullYear()} SIGO Supermercados · Isla de Margarita, Venezuela. Propuesta de landing page.
+          © {ANIO_ACTUAL} SIGO Supermercados · Isla de Margarita, Venezuela. Propuesta de landing page.
         </p>
       </footer>
     </>

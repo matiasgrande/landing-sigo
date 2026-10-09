@@ -146,7 +146,7 @@ export function Entregas() {
                       <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white/15 ring-1 ring-current/10">
                         <Icono className="h-7 w-7" />
                       </span>
-                      <span className="text-5xl font-black opacity-25">0{indice + 1}</span>
+                      <span className="text-5xl font-black opacity-25" aria-hidden>0{indice + 1}</span>
                     </div>
                     <h3 className="mt-6 text-3xl font-black tracking-tight">{modalidad.titulo}</h3>
                     <p className="mt-1 font-bold opacity-80">{modalidad.vehiculo}</p>

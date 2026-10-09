@@ -6,6 +6,7 @@ import { gsap, useGSAP, ScrollTrigger, CON_MOVIMIENTO, ESCRITORIO_CON_MOVIMIENTO
 import logoSigo from "@/recursos/logo-sigo.png";
 import { URL_ECOMMERCE } from "@/datos/contacto";
 import { useTasa } from "@/componentes/ContextoTasa";
+import { formatearFechaTasa } from "@/lib/useTasaBcv";
 import { IconoCarrito, IconoCerrar, IconoMenu } from "@/componentes/Iconos";
 
 const ENLACES = [
@@ -20,7 +21,10 @@ function PildoraTasa() {
   const { tasa } = useTasa();
   if (!tasa) return null;
   return (
-    <span className="hidden items-center gap-2 rounded-full bg-azul-100 px-3 py-1.5 text-xs font-bold text-azul xl:inline-flex">
+    <span
+      title={formatearFechaTasa(tasa.fecha) ? `Tasa oficial BCV del ${formatearFechaTasa(tasa.fecha)}` : "Tasa oficial BCV"}
+      className="hidden items-center gap-2 rounded-full bg-azul-100 px-3 py-1.5 text-xs font-bold text-azul xl:inline-flex"
+    >
       <span className="h-2 w-2 rounded-full bg-verde-vivo" aria-hidden />
       BCV Bs. {tasa.valor.toLocaleString("es-VE", { maximumFractionDigits: 2 })}
     </span>
@@ -33,6 +37,8 @@ export function Encabezado() {
   const cabecera = useRef<HTMLElement>(null);
   const barraProgreso = useRef<HTMLDivElement>(null);
   const panelMenu = useRef<HTMLDivElement>(null);
+  const botonMenu = useRef<HTMLButtonElement>(null);
+  const botonCerrar = useRef<HTMLButtonElement>(null);
 
   // Barra de progreso de lectura y estado "desplazado" de la cabecera
   useGSAP(
@@ -69,11 +75,47 @@ export function Encabezado() {
     { dependencies: [menuAbierto], scope: cabecera },
   );
 
-  // Bloquea el scroll del fondo con el menú móvil abierto
+  // Menú abierto: bloquea el scroll del fondo, enfoca "Cerrar", atrapa el foco y cierra con Escape
   useEffect(() => {
-    document.body.style.overflow = menuAbierto ? "hidden" : "";
+    if (!menuAbierto) return;
+    const boton = botonMenu.current;
+    document.body.style.overflow = "hidden";
+    botonCerrar.current?.focus();
+
+    function alPresionarTecla(evento: KeyboardEvent) {
+      if (evento.key === "Escape") {
+        setMenuAbierto(false);
+        return;
+      }
+      if (evento.key !== "Tab" || !panelMenu.current) return;
+      const enfocables = panelMenu.current.querySelectorAll<HTMLElement>("a[href], button:not([disabled])");
+      const primero = enfocables[0];
+      const ultimo = enfocables[enfocables.length - 1];
+      if (!primero || !ultimo) return;
+      const fuera = !panelMenu.current.contains(document.activeElement);
+      if (evento.shiftKey && (document.activeElement === primero || fuera)) {
+        evento.preventDefault();
+        ultimo.focus();
+      } else if (!evento.shiftKey && (document.activeElement === ultimo || fuera)) {
+        evento.preventDefault();
+        primero.focus();
+      }
+    }
+
+    // Si el botón de menú deja de verse (rotar la tablet, ventana más ancha), se cierra
+    // el panel; si no, el scroll quedaría bloqueado sin forma de desbloquearlo
+    function alRedimensionar() {
+      if (boton && boton.offsetParent === null) setMenuAbierto(false);
+    }
+
+    document.addEventListener("keydown", alPresionarTecla);
+    window.addEventListener("resize", alRedimensionar);
     return () => {
       document.body.style.overflow = "";
+      document.removeEventListener("keydown", alPresionarTecla);
+      window.removeEventListener("resize", alRedimensionar);
+      // Devuelve el foco al botón que abrió el menú (sin mover la página)
+      if (boton && boton.offsetParent !== null) boton.focus({ preventScroll: true });
     };
   }, [menuAbierto]);
 
@@ -86,7 +128,7 @@ export function Encabezado() {
       />
       <nav
         aria-label="Principal"
-        className={`mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-full py-2 pl-3 pr-2 transition-all duration-300 sm:pl-4 ${
+        className={`nav-principal mx-auto flex max-w-6xl items-center justify-between gap-3 rounded-full py-2 pl-3 pr-2 transition-all duration-300 sm:pl-4 ${
           desplazado ? "bg-white shadow-lg shadow-azul/10" : "bg-white"
         }`}
       >
@@ -94,7 +136,7 @@ export function Encabezado() {
           <Image src={logoSigo} alt="SIGO" width={44} height={44} priority className="h-10 w-10 sm:h-11 sm:w-11" />
         </a>
 
-        <ul className="hidden items-center gap-1 lg:flex">
+        <ul className="enlaces-principales hidden items-center gap-1 lg:flex">
           {ENLACES.map((enlace) => (
             <li key={enlace.href}>
               <a
@@ -111,15 +153,21 @@ export function Encabezado() {
           <PildoraTasa />
           <a
             href={URL_ECOMMERCE}
-            className="inline-flex items-center gap-2 rounded-full bg-verde px-4 py-2.5 text-sm font-extrabold text-white transition hover:bg-verde-vivo sm:px-5"
+            aria-label="Compra online"
+            className="inline-flex shrink-0 items-center gap-2 rounded-full bg-verde px-4 py-2.5 text-sm font-extrabold text-white transition hover:bg-verde-vivo sm:px-5"
           >
             <IconoCarrito className="h-4 w-4" />
-            <span>Compra online</span>
+            {/* Se oculta si la cabecera no tiene espacio (pantallas de 280 px o texto ampliado) */}
+            <span className="texto-compra" aria-hidden>
+              Compra online
+            </span>
           </a>
           <button
+            ref={botonMenu}
             type="button"
+            data-boton-menu
             onClick={() => setMenuAbierto(true)}
-            className="grid h-11 w-11 place-items-center rounded-full text-azul hover:bg-azul-100 lg:hidden"
+            className="boton-menu grid h-11 w-11 shrink-0 place-items-center rounded-full text-azul hover:bg-azul-100 lg:hidden"
             aria-label="Abrir menú"
             aria-expanded={menuAbierto}
           >
@@ -131,7 +179,7 @@ export function Encabezado() {
       {menuAbierto && (
         <div
           ref={panelMenu}
-          className="fixed inset-0 z-50 flex flex-col bg-azul px-6 pb-10 pt-6 text-white lg:hidden"
+          className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-azul px-6 pb-10 pt-6 text-white"
           role="dialog"
           aria-modal="true"
           aria-label="Menú"
@@ -141,6 +189,7 @@ export function Encabezado() {
               <Image src={logoSigo} alt="SIGO" width={44} height={44} className="h-11 w-11" />
             </span>
             <button
+              ref={botonCerrar}
               type="button"
               onClick={() => setMenuAbierto(false)}
               className="grid h-12 w-12 place-items-center rounded-full bg-white/10"

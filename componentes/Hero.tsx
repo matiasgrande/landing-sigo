@@ -11,15 +11,17 @@ import {
 } from "@/lib/gsap";
 import { URL_ECOMMERCE, calcularAniosTrayectoria } from "@/datos/contacto";
 import { Sonrisa } from "@/componentes/Revelar";
+import { formatearUsd } from "@/lib/useTasaBcv";
 import { IconoCarrito, IconoChat, IconoUbicacion } from "@/componentes/Iconos";
 
 const PALABRAS_TITULO = ["Sirviendo", "con", "amor"];
 
 const LINEAS_VISTA_PREVIA = [
-  { texto: "2 Harina P.A.N.", precio: "$2,40" },
-  { texto: "500 g Queso blanco", precio: "$3,75" },
-  { texto: "1 Docena de huevos", precio: "$2,90" },
+  { texto: "2 Harina P.A.N.", precio: 2.4 },
+  { texto: "500 g Queso blanco", precio: 3.75 },
+  { texto: "1 Docena de huevos", precio: 2.9 },
 ];
+const TOTAL_VISTA_PREVIA = LINEAS_VISTA_PREVIA.reduce((suma, linea) => suma + linea.precio, 0);
 
 // Vista previa del asistente: refuerza la función insignia desde el primer pliegue
 function TarjetaVistaPrevia() {
@@ -45,7 +47,7 @@ function TarjetaVistaPrevia() {
           {LINEAS_VISTA_PREVIA.map((linea) => (
             <li key={linea.texto} data-hero="linea" className="flex items-center justify-between text-sm">
               <span className="font-semibold">{linea.texto}</span>
-              <span className="font-extrabold text-verde">{linea.precio}</span>
+              <span className="font-extrabold text-verde">{formatearUsd(linea.precio)}</span>
             </li>
           ))}
         </ul>
@@ -56,7 +58,7 @@ function TarjetaVistaPrevia() {
           <span className="flex items-center gap-2 text-sm font-bold">
             <IconoCarrito className="h-4 w-4" /> Carrito listo
           </span>
-          <span className="font-black">$9,05</span>
+          <span className="font-black">{formatearUsd(TOTAL_VISTA_PREVIA)}</span>
         </div>
       </div>
     </div>
@@ -69,6 +71,8 @@ export function Hero() {
 
   useGSAP(
     () => {
+      // Si el respaldo de red lenta ya mostró el hero, no se repite la entrada (evita el parpadeo)
+      const entradaPendiente = document.documentElement.classList.contains("js");
       window.__animacionesListas = true;
       const mm = gsap.matchMedia();
 
@@ -78,6 +82,7 @@ export function Hero() {
       });
 
       mm.add(CON_MOVIMIENTO, () => {
+        if (!entradaPendiente) return;
         // Entrada
         const entrada = gsap.timeline({ defaults: { ease: "power3.out" } });
         entrada

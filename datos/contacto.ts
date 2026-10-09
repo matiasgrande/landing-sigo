@@ -37,7 +37,10 @@ export function crearEnlaceWhatsApp(canal: CanalWhatsApp, mensaje?: string): str
 
 export const ANIO_FUNDACION = 1972;
 
-/** Años de trayectoria calculados en tiempo de build/render */
-export function calcularAniosTrayectoria(fecha: Date = new Date()): number {
-  return fecha.getFullYear() - ANIO_FUNDACION;
+/** Año en que se construyó el sitio (igual en servidor y cliente) */
+export const ANIO_ACTUAL = Number(process.env.NEXT_PUBLIC_ANIO_CONSTRUCCION) || 2026;
+
+/** Años de trayectoria según el año de construcción */
+export function calcularAniosTrayectoria(anio: number = ANIO_ACTUAL): number {
+  return anio - ANIO_FUNDACION;
 }

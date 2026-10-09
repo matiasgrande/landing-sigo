@@ -123,15 +123,15 @@ export function Sucursales() {
       );
       gsap.fromTo(
         visibles,
-        { autoAlpha: 0, y: 24 },
+        { opacity: 0, y: 24 },
         {
-          autoAlpha: 1,
+          opacity: 1,
           y: 0,
           duration: 0.45,
           stagger: 0.05,
           ease: "power3.out",
           overwrite: true,
-          clearProps: "opacity,visibility,transform",
+          clearProps: "opacity,transform",
         },
       );
     },
@@ -167,7 +167,7 @@ export function Sucursales() {
       mm.add(CON_MOVIMIENTO, () => {
         // Entrada escalonada de las tarjetas
         gsap.from("[data-sucursal]", {
-          autoAlpha: 0,
+          opacity: 0,
           y: 40,
           stagger: 0.08,
           scrollTrigger: { trigger: "[data-rejilla-sucursales]", start: "top 85%", once: true },
@@ -341,7 +341,10 @@ export function Sucursales() {
                     <a
                       href={crearEnlaceWhatsApp(
                         WHATSAPP_ATENCION,
-                        `¡Hola Sigo! Quisiera información sobre ${sucursal.nombre}.`,
+                        // Sin horario publicado, el botón "Horario" pregunta justamente eso
+                        sucursal.horario
+                          ? `¡Hola Sigo! Quisiera información sobre ${sucursal.nombre}.`
+                          : `¡Hola Sigo! ¿Cuál es el horario de ${sucursal.nombre}?`,
                       )}
                       target="_blank"
                       rel="noopener noreferrer"

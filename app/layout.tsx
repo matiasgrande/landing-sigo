@@ -11,14 +11,16 @@ const nunito = Nunito({
   display: "swap",
 });
 
-const URL_SITIO = "https://matiasgrande.github.io/landing-sigo";
+const URL_SITIO = "https://matiasgrande.github.io/landing-sigo/";
+const ID_ORGANIZACION = `${URL_SITIO}#organizacion`;
 
 export const metadata: Metadata = {
-  metadataBase: new URL(URL_SITIO),
+  // Solo el dominio: Next ya antepone el basePath a las imágenes de metadatos
+  metadataBase: new URL("https://matiasgrande.github.io"),
   title: "SIGO Supermercados · Isla de Margarita desde 1972",
   description:
     "Supermercados SIGO en la Isla de Margarita: 8 tiendas, delivery a toda la isla, retiro en tu vehículo y compra online. Sirviendo con amor desde 1972.",
-  alternates: { canonical: "/" },
+  alternates: { canonical: URL_SITIO },
   openGraph: {
     type: "website",
     locale: "es_VE",
@@ -42,9 +44,11 @@ const datosEstructurados = {
   "@graph": [
     {
       "@type": "Organization",
-      "@id": `${URL_SITIO}#organizacion`,
+      "@id": ID_ORGANIZACION,
       name: "SIGO Supermercados",
       url: URL_SITIO,
+      logo: `${URL_SITIO}icon.png`,
+      image: `${URL_SITIO}opengraph-image.jpg`,
       foundingDate: String(ANIO_FUNDACION),
       founder: { "@type": "Person", name: "José Martínez Valenzuela" },
       sameAs: [REDES.instagram, REDES.facebook, URL_ECOMMERCE],
@@ -59,10 +63,13 @@ const datosEstructurados = {
     ...SUCURSALES.map((sucursal) => ({
       "@type": "GroceryStore",
       name: sucursal.nombre,
-      parentOrganization: { "@id": `${URL_SITIO}#organizacion` },
+      parentOrganization: { "@id": ID_ORGANIZACION },
+      image: `${URL_SITIO}opengraph-image.jpg`,
       address: {
         "@type": "PostalAddress",
         streetAddress: sucursal.ubicacion,
+        // "Pampatar · Maneiro" -> "Pampatar"; las genéricas ("Isla de Margarita") no aportan localidad
+        ...(sucursal.zona.includes("·") && { addressLocality: sucursal.zona.split("·")[0]?.trim() }),
         addressRegion: "Nueva Esparta",
         addressCountry: "VE",
       },
@@ -81,13 +88,18 @@ export default function DisenoRaiz({ children }: Readonly<{ children: ReactNode 
   return (
     <html lang="es-VE" className={nunito.variable} suppressHydrationWarning>
       <body className="font-sans antialiased">
-        {/* Marca la página como "con JS"; si GSAP no arranca en 4 s, se muestra todo igual */}
+        {/* Marca la página como "con JS"; si GSAP no arranca en 1,5 s (red lenta), se muestra todo sin animar */}
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "document.documentElement.classList.add('js');setTimeout(function(){if(!window.__animacionesListas)document.documentElement.classList.remove('js')},4000);",
+              "document.documentElement.classList.add('js');setTimeout(function(){if(!window.__animacionesListas)document.documentElement.classList.remove('js')},1500);",
           }}
         />
+        {/* Sin JS: la barra inferior y el botón de WhatsApp quedan visibles para navegar,
+            y se oculta el botón de menú porque no puede abrirse */}
+        <noscript>
+          <style>{"[data-barra],[data-flotante]{visibility:visible}[data-boton-menu]{display:none}"}</style>
+        </noscript>
         <a
           href="#contenido"
           className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-sol focus:px-5 focus:py-3 focus:font-bold focus:text-azul"

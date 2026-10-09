@@ -8,29 +8,39 @@ interface PropsRevelar {
   retraso?: number;
   className?: string;
   desplazamiento?: number;
+  /** Etiqueta a renderizar: "li" cuando es hijo directo de una lista */
+  como?: "div" | "li";
 }
 
 /** Aparece con fade + desplazamiento al entrar en el viewport */
-export function Revelar({ children, retraso = 0, className, desplazamiento = 32 }: PropsRevelar) {
-  const referencia = useRef<HTMLDivElement>(null);
+export function Revelar({ children, retraso = 0, className, desplazamiento = 32, como = "div" }: PropsRevelar) {
+  const referencia = useRef<HTMLElement | null>(null);
 
   useGSAP(
     () => {
       const mm = gsap.matchMedia();
       mm.add(CON_MOVIMIENTO, () => {
+        // Solo opacidad: con autoAlpha (visibility:hidden) el contenido no recibe foco de teclado
         gsap.from(referencia.current, {
-          autoAlpha: 0,
+          opacity: 0,
           y: desplazamiento,
           delay: retraso,
-          scrollTrigger: { trigger: referencia.current, start: "top 88%", once: true },
+          scrollTrigger: { trigger: referencia.current, start: "top 95%", once: true },
         });
       });
     },
     { scope: referencia },
   );
 
-  return (
-    <div ref={referencia} className={className}>
+  const asignar = (elemento: HTMLElement | null) => {
+    referencia.current = elemento;
+  };
+  return como === "li" ? (
+    <li ref={asignar} className={className}>
+      {children}
+    </li>
+  ) : (
+    <div ref={asignar} className={className}>
       {children}
     </div>
   );

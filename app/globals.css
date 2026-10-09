@@ -34,8 +34,16 @@ body {
 }
 
 /* Las anclas no quedan ocultas bajo la cabecera fija */
-section[id] {
+section[id],
+form[id] {
   scroll-margin-top: 5rem;
+}
+
+/* En móvil, lo que recibe foco no queda tapado por la barra inferior fija */
+@media (max-width: 1023px) {
+  html {
+    scroll-padding-bottom: 6.5rem;
+  }
 }
 
 :focus-visible {
@@ -55,6 +63,29 @@ section[id] {
 /* Con JS activo, los elementos de entrada del hero esperan a GSAP (evita parpadeo) */
 .js [data-hero] {
   visibility: hidden;
+}
+
+/* Cabecera: decide según su ancho real en rem, así también se adapta al texto ampliado */
+.nav-principal {
+  container-type: inline-size;
+}
+@container (max-width: 18rem) {
+  .texto-compra {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+@container (max-width: 58rem) {
+  .enlaces-principales {
+    display: none;
+  }
+  .boton-menu {
+    display: grid;
+  }
 }
 
 /* Oculta la barra de scroll en carruseles horizontales */

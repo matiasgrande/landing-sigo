@@ -33,7 +33,7 @@ export function SigoCreditos() {
       mm.add(CON_MOVIMIENTO, () => {
         // Medios de pago: aparecen en cascada con rebote
         gsap.from("[data-pago]", {
-          autoAlpha: 0,
+          opacity: 0,
           y: 14,
           scale: 0.9,
           stagger: 0.06,
@@ -82,15 +82,20 @@ export function SigoCreditos() {
 
         <ol className="mt-14 grid gap-4 md:grid-cols-3">
           {PASOS.map(({ Icono, titulo, texto }, indice) => (
-            <Revelar key={titulo} retraso={indice * 0.12}>
-              <li className="relative h-full rounded-[2rem] bg-white/10 p-7 ring-1 ring-white/15">
-                <span className="absolute right-6 top-5 text-6xl font-black text-white/10">{indice + 1}</span>
+            <Revelar
+              key={titulo}
+              como="li"
+              retraso={indice * 0.12}
+              className="relative h-full rounded-[2rem] bg-white/10 p-7 ring-1 ring-white/15"
+            >
+                <span className="absolute right-6 top-5 text-6xl font-black text-white/10" aria-hidden>
+                  {indice + 1}
+                </span>
                 <span className="grid h-14 w-14 place-items-center rounded-2xl bg-sol text-azul">
                   <Icono className="h-7 w-7" />
                 </span>
                 <h3 className="mt-6 text-2xl font-black">{titulo}</h3>
                 <p className="mt-2 text-white/80">{texto}</p>
-              </li>
             </Revelar>
           ))}
         </ol>

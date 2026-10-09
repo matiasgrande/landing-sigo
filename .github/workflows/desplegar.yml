@@ -4,6 +4,9 @@ on:
   push:
     branches: [main, claude/propuesta-landing]
   workflow_dispatch:
+  # Reconstruye cada 1 de enero para actualizar los años de trayectoria y el ©
+  schedule:
+    - cron: "0 5 1 1 *"
 
 permissions:
   contents: write

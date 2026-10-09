@@ -3,11 +3,10 @@
 // Punto único de registro de GSAP y sus plugins
 import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
-import { Flip } from "gsap/Flip";
 import { DrawSVGPlugin } from "gsap/DrawSVGPlugin";
 import { useGSAP } from "@gsap/react";
 
-gsap.registerPlugin(ScrollTrigger, Flip, DrawSVGPlugin, useGSAP);
+gsap.registerPlugin(ScrollTrigger, DrawSVGPlugin, useGSAP);
 
 gsap.defaults({ ease: "power3.out", duration: 0.8 });
 
@@ -35,10 +34,25 @@ export function pausarFueraDeVista(animacion: gsap.core.Animation, contenedor: E
   });
 }
 
+/**
+ * Si un elemento recibe el foco (teclado) mientras su animación de entrada por scroll
+ * aún no ha corrido, la completa al instante para que lo enfocado siempre sea visible.
+ * No toca animaciones con scrub ni bucles infinitos.
+ */
+export function revelarAlEnfocar(evento: FocusEvent): void {
+  for (let nodo = evento.target instanceof Element ? evento.target : null; nodo; nodo = nodo.parentElement) {
+    for (const animacion of gsap.getTweensOf(nodo)) {
+      const disparador = animacion.scrollTrigger;
+      if (!disparador || disparador.vars.scrub || animacion.repeat() === -1) continue;
+      animacion.progress(1);
+    }
+  }
+}
+
 declare global {
   interface Window {
     __animacionesListas?: boolean;
   }
 }
 
-export { gsap, ScrollTrigger, Flip, useGSAP };
+export { gsap, ScrollTrigger, useGSAP };

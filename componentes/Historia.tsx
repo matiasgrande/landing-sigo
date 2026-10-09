@@ -15,7 +15,7 @@ interface Hito {
 }
 
 export function Historia() {
-  const referencia = useRef<HTMLOListElement>(null);
+  const referencia = useRef<HTMLDivElement>(null);
 
   useGSAP(
     () => {
@@ -112,7 +112,8 @@ export function Historia() {
           descripcion="Somos una empresa margariteña, hecha por y para la gente de la isla."
         />
 
-        <ol ref={referencia} className="relative mt-16 space-y-12 pl-10 sm:space-y-16 md:pl-0">
+        {/* Las líneas decorativas van fuera del <ol> para que la lista solo tenga <li> */}
+        <div ref={referencia} className="relative mt-16 pl-10 md:pl-0">
           {/* Línea de tiempo que se dibuja con el scroll */}
           <div className="absolute bottom-0 left-[0.6rem] top-0 w-1 rounded-full bg-azul-100 md:left-1/2 md:-translate-x-1/2" aria-hidden />
           <div
@@ -121,6 +122,7 @@ export function Historia() {
             aria-hidden
           />
 
+          <ol className="space-y-12 sm:space-y-16">
           {hitos.map((hito, indice) => {
             const derecha = indice % 2 === 1;
             return (
@@ -136,7 +138,7 @@ export function Historia() {
                   className={derecha ? "md:col-start-2" : "md:text-right"}
                   desplazamiento={40}
                 >
-                  <p className="text-5xl font-black tracking-tight text-sol sm:text-6xl [-webkit-text-stroke:1.5px_var(--color-azul)]">
+                  <p className="text-[clamp(2rem,12vw,3rem)] font-black tracking-tight text-sol [overflow-wrap:anywhere] sm:text-6xl [-webkit-text-stroke:1.5px_var(--color-azul)]">
                     {hito.marca}
                   </p>
                   <h3 className="mt-2 text-2xl font-black text-azul">{hito.titulo}</h3>
@@ -159,7 +161,8 @@ export function Historia() {
               </li>
             );
           })}
-        </ol>
+          </ol>
+        </div>
       </div>
     </section>
   );

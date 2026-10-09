@@ -3,12 +3,14 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { gsap, useGSAP, CON_MOVIMIENTO } from "@/lib/gsap";
 import {
+  MAXIMO_CARACTERES,
   calcularSubtotal,
   formatearCantidad,
   interpretarPedido,
+  maximoPara,
   type LineaPedido,
 } from "@/lib/interpretarPedido";
-import { formatearBs, formatearUsd } from "@/lib/useTasaBcv";
+import { formatearBs, formatearFechaTasa, formatearUsd, type TasaBcv } from "@/lib/useTasaBcv";
 import { useTasa } from "@/componentes/ContextoTasa";
 import { URL_ECOMMERCE, WHATSAPP_ATENCION, crearEnlaceWhatsApp } from "@/datos/contacto";
 import { TituloSeccion, Revelar } from "@/componentes/Revelar";
@@ -44,17 +46,26 @@ function pluralizar(cantidad: number, singular: string, plural: string): string 
   return `${cantidad} ${cantidad === 1 ? singular : plural}`;
 }
 
+function textoTasa(tasa: TasaBcv): string {
+  const fecha = formatearFechaTasa(tasa.fecha);
+  return fecha ? `tasa BCV del ${fecha}` : "tasa BCV";
+}
+
+/** Id del formulario: "Mi lista" de la barra móvil lleva aquí y enfoca el campo */
+export const ID_FORMULARIO_LISTA = "escribe-tu-lista";
+
 function unirCarrito(actual: LineaPedido[], nuevas: LineaPedido[]): LineaPedido[] {
   const resultado = actual.map((linea) => ({ ...linea }));
   for (const nueva of nuevas) {
     const existente = resultado.find((l) => l.producto.id === nueva.producto.id);
-    if (existente) existente.cantidad += nueva.cantidad;
+    // Respeta el tope por producto también al sumar varias listas
+    if (existente) existente.cantidad = Math.min(existente.cantidad + nueva.cantidad, maximoPara(existente.producto));
     else resultado.push(nueva);
   }
   return resultado;
 }
 
-function crearMensajeWhatsApp(carrito: LineaPedido[], total: number): string {
+function crearMensajeWhatsApp(carrito: LineaPedido[], total: number, tasa: TasaBcv | null): string {
   const lineas = carrito.map(
     (l) => `• ${formatearCantidad(l)} ${l.producto.nombre} (${l.producto.presentacion})`,
   );
@@ -64,6 +75,7 @@ function crearMensajeWhatsApp(carrito: LineaPedido[], total: number): string {
     ...lineas,
     "",
     `Total referencial: ${formatearUsd(total)}`,
+    ...(tasa ? [`≈ ${formatearBs(total, tasa.valor)} (${textoTasa(tasa)})`] : []),
   ].join("\n");
 }
 
@@ -73,6 +85,7 @@ export function AsistenteCarrito() {
   const [texto, setTexto] = useState("");
   const [escribiendo, setEscribiendo] = useState(false);
   const contenedorMensajes = useRef<HTMLDivElement>(null);
+  const campo = useRef<HTMLTextAreaElement>(null);
   const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
   const siguienteId = useRef(1);
   const idCampo = useId();
@@ -98,7 +111,10 @@ export function AsistenteCarrito() {
   useGSAP(
     () => {
       if (!escribiendo) return;
-      gsap.to("[data-punto]", { y: -4, duration: 0.3, ease: "sine.inOut", repeat: -1, yoyo: true, stagger: 0.12 });
+      const mm = gsap.matchMedia();
+      mm.add(CON_MOVIMIENTO, () => {
+        gsap.to("[data-punto]", { y: -4, duration: 0.3, ease: "sine.inOut", repeat: -1, yoyo: true, stagger: 0.12 });
+      });
     },
     { dependencies: [escribiendo], scope: seccion },
   );
@@ -134,8 +150,25 @@ export function AsistenteCarrito() {
     };
   }, []);
 
+  // Los enlaces a "Escribe tu lista" llevan al formulario y dejan el cursor en el campo
+  useEffect(() => {
+    function alHacerClic(evento: MouseEvent) {
+      const enlace = evento.target instanceof Element ? evento.target.closest("a") : null;
+      if (!enlace || enlace.getAttribute("href") !== `#${ID_FORMULARIO_LISTA}`) return;
+      const formulario = document.getElementById(ID_FORMULARIO_LISTA);
+      if (!formulario || !campo.current) return;
+      evento.preventDefault();
+      const suave = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      formulario.scrollIntoView({ behavior: suave ? "smooth" : "auto", block: "center" });
+      campo.current.focus({ preventScroll: true });
+    }
+    document.addEventListener("click", alHacerClic);
+    return () => document.removeEventListener("click", alHacerClic);
+  }, []);
+
   function procesar(entrada: string) {
-    const limpio = entrada.trim();
+    // El maxLength del campo se puede saltar (p. ej. pegando por script): se recorta aquí también
+    const limpio = entrada.trim().slice(0, MAXIMO_CARACTERES);
     if (!limpio || escribiendo) return;
 
     setMensajes((previos) => [...previos, { id: siguienteId.current++, autor: "usuario", texto: limpio }]);
@@ -145,13 +178,14 @@ export function AsistenteCarrito() {
     temporizador.current = setTimeout(() => {
       let respuesta: string;
       try {
-        const { lineas, noEncontrados } = interpretarPedido(limpio);
+        const { lineas, noEncontrados, avisos } = interpretarPedido(limpio);
         if (lineas.length > 0) setCarrito((actual) => unirCarrito(actual, lineas));
 
         const partes: string[] = [];
         if (lineas.length > 0) {
           partes.push(`Listo, agregué ${pluralizar(lineas.length, "producto", "productos")} a tu carrito.`);
         }
+        partes.push(...avisos);
         if (noEncontrados.length > 0) {
           partes.push(
             `No encontré: ${noEncontrados.map((n) => `"${n}"`).join(", ")}. Prueba con otro nombre o escríbelo más simple.`,
@@ -184,7 +218,8 @@ export function AsistenteCarrito() {
         .map((linea) => {
           if (linea.producto.id !== idProducto) return linea;
           const paso = linea.producto.unidad === "kg" ? 0.25 : 1;
-          return { ...linea, cantidad: Math.round((linea.cantidad + paso * direccion) * 100) / 100 };
+          const cantidad = Math.round((linea.cantidad + paso * direccion) * 100) / 100;
+          return { ...linea, cantidad: Math.min(cantidad, maximoPara(linea.producto)) };
         })
         .filter((linea) => {
           if (linea.cantidad > 0) return true;
@@ -244,7 +279,7 @@ export function AsistenteCarrito() {
                   <p
                     key={mensaje.id}
                     data-mensaje
-                    className={`w-fit max-w-[88%] whitespace-pre-line rounded-2xl px-4 py-3 text-[0.95rem] leading-snug ${
+                    className={`w-fit max-w-[88%] whitespace-pre-line rounded-2xl px-4 py-3 [overflow-wrap:anywhere] text-[0.95rem] leading-snug ${
                       mensaje.autor === "usuario"
                         ? "ml-auto rounded-br-sm bg-azul font-semibold text-white"
                         : "rounded-bl-sm bg-crema text-tinta"
@@ -272,24 +307,25 @@ export function AsistenteCarrito() {
                   type="button"
                   onClick={() => procesar(sugerencia)}
                   disabled={escribiendo}
-                  className="shrink-0 rounded-full border border-azul/15 px-3 py-2 text-xs font-bold text-azul transition hover:bg-azul-100 disabled:opacity-50"
+                  className="min-h-11 shrink-0 rounded-full border border-azul/15 px-3 py-2 text-xs font-bold text-azul transition hover:bg-azul-100 disabled:opacity-50"
                 >
                   {sugerencia.length > 38 ? `${sugerencia.slice(0, 38)}…` : sugerencia}
                 </button>
               ))}
             </div>
 
-            <form onSubmit={alEnviar} className="flex items-end gap-2 border-t border-azul-100 p-3">
+            <form id={ID_FORMULARIO_LISTA} onSubmit={alEnviar} className="flex items-end gap-2 border-t border-azul-100 p-3">
               <label htmlFor={idCampo} className="sr-only">
                 Escribe tu lista de compras
               </label>
               <textarea
+                ref={campo}
                 id={idCampo}
                 value={texto}
                 onChange={(e) => setTexto(e.target.value)}
                 onKeyDown={alPresionarTecla}
                 rows={1}
-                maxLength={500}
+                maxLength={MAXIMO_CARACTERES}
                 placeholder="Ej.: 2 harinas pan y café"
                 className="max-h-28 min-h-12 flex-1 resize-none rounded-2xl bg-crema px-4 py-3 text-base outline-none ring-azul/30 placeholder:text-gris/70 focus:ring-2"
               />
@@ -326,19 +362,20 @@ export function AsistenteCarrito() {
                       <li
                         key={linea.producto.id}
                         data-linea-carrito={linea.producto.id}
-                        className="flex items-center gap-3 rounded-2xl bg-white/[0.07] p-3"
+                        className="flex flex-wrap items-center gap-x-2 gap-y-2 rounded-2xl bg-white/[0.07] p-3 sm:flex-nowrap sm:gap-x-3"
                       >
-                        <div className="min-w-0 flex-1">
+                        {/* En pantallas pequeñas: nombre y quitar arriba; cantidad y subtotal debajo */}
+                        <div className="min-w-0 flex-1 max-sm:order-1 max-sm:basis-[calc(100%-3.5rem)]">
                           <p className="line-clamp-2 break-words font-bold leading-tight">{linea.producto.nombre}</p>
                           <p className="text-xs text-white/60">
                             {linea.producto.presentacion} · {formatearUsd(linea.producto.precioUsd)}
                           </p>
                         </div>
-                        <div className="flex items-center gap-1 rounded-full bg-white/10 p-1">
+                        <div className="flex items-center gap-1 rounded-full bg-white/10 p-1 max-sm:order-3">
                           <button
                             type="button"
                             onClick={() => cambiarCantidad(linea.producto.id, -1)}
-                            className="grid h-8 w-8 place-items-center rounded-full hover:bg-white/15"
+                            className="grid h-11 w-11 place-items-center rounded-full hover:bg-white/15 sm:h-8 sm:w-8"
                             aria-label={`Restar ${linea.producto.nombre}`}
                           >
                             <IconoMenos className="h-4 w-4" />
@@ -347,19 +384,20 @@ export function AsistenteCarrito() {
                           <button
                             type="button"
                             onClick={() => cambiarCantidad(linea.producto.id, 1)}
-                            className="grid h-8 w-8 place-items-center rounded-full hover:bg-white/15"
+                            disabled={linea.cantidad >= maximoPara(linea.producto)}
+                            className="grid h-11 w-11 place-items-center rounded-full hover:bg-white/15 disabled:opacity-40 sm:h-8 sm:w-8"
                             aria-label={`Sumar ${linea.producto.nombre}`}
                           >
                             <IconoMas className="h-4 w-4" />
                           </button>
                         </div>
-                        <p className="hidden w-16 text-right font-extrabold text-sol sm:block">
+                        <p className="text-right font-extrabold text-sol max-sm:order-4 max-sm:ml-auto sm:w-16">
                           {formatearUsd(calcularSubtotal(linea))}
                         </p>
                         <button
                           type="button"
                           onClick={() => quitar(linea.producto.id)}
-                          className="grid h-8 w-8 place-items-center rounded-full text-white/50 hover:bg-white/10 hover:text-white"
+                          className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-white/50 hover:bg-white/10 hover:text-white max-sm:order-2 sm:h-8 sm:w-8"
                           aria-label={`Quitar ${linea.producto.nombre}`}
                         >
                           <IconoCerrar className="h-4 w-4" />
@@ -374,15 +412,15 @@ export function AsistenteCarrito() {
               <div className="flex items-end justify-between">
                 <span className="text-sm font-bold text-white/70">Total referencial</span>
                 <div className="text-right">
-                  <p className="text-3xl font-black">{formatearUsd(total)}</p>
-                  {tasa && total > 0 && <p className="text-xs text-white/60">{formatearBs(total, tasa.valor)} · tasa BCV</p>}
+                  <p className="text-3xl font-black [overflow-wrap:anywhere]">{formatearUsd(total)}</p>
+                  {tasa && total > 0 && <p className="text-xs text-white/60">{formatearBs(total, tasa.valor)} · {textoTasa(tasa)}</p>}
                 </div>
               </div>
               <div className="mt-4 grid gap-2 sm:grid-cols-2">
                 <a
                   href={
                     carrito.length > 0
-                      ? crearEnlaceWhatsApp(WHATSAPP_ATENCION, crearMensajeWhatsApp(carrito, total))
+                      ? crearEnlaceWhatsApp(WHATSAPP_ATENCION, crearMensajeWhatsApp(carrito, total, tasa))
                       : undefined
                   }
                   aria-disabled={carrito.length === 0}

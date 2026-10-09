@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { ID_FORMULARIO_LISTA } from "@/componentes/AsistenteCarrito";
 import { gsap, useGSAP, ScrollTrigger } from "@/lib/gsap";
 import { URL_ECOMMERCE, WHATSAPP_ATENCION, crearEnlaceWhatsApp } from "@/datos/contacto";
 import { IconoCarrito, IconoChat, IconoTienda, IconoWhatsApp } from "@/componentes/Iconos";
@@ -49,11 +50,10 @@ export function BarraMovil() {
         data-barra
         aria-label="Accesos rápidos"
         className="invisible fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 rounded-3xl bg-white p-1.5 shadow-xl shadow-azul/20 ring-1 ring-azul/10 lg:hidden"
-        style={{ marginBottom: "env(safe-area-inset-bottom)" }}
       >
         {[
           { href: URL_ECOMMERCE, texto: "Comprar", Icono: IconoCarrito, externo: false },
-          { href: "#asistente", texto: "Mi lista", Icono: IconoChat, externo: false },
+          { href: `#${ID_FORMULARIO_LISTA}`, texto: "Mi lista", Icono: IconoChat, externo: false },
           { href: "#tiendas", texto: "Tiendas", Icono: IconoTienda, externo: false },
           { href: enlaceWhatsApp, texto: "WhatsApp", Icono: IconoWhatsApp, externo: true },
         ].map(({ href, texto, Icono, externo }) => (
@@ -61,7 +61,7 @@ export function BarraMovil() {
             key={texto}
             href={href}
             {...(externo ? { target: "_blank", rel: "noopener noreferrer" } : {})}
-            className="flex flex-col items-center gap-0.5 rounded-2xl py-2 text-[0.7rem] font-extrabold text-azul active:bg-azul-100"
+            className="flex min-w-0 flex-col items-center gap-0.5 rounded-2xl py-2 text-center text-[clamp(0.6rem,3.4vw,0.7rem)] font-extrabold [overflow-wrap:anywhere] text-azul active:bg-azul-100"
           >
             <Icono className={`h-5 w-5 ${externo ? "text-verde" : ""}`} />
             {texto}

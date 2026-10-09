@@ -44,6 +44,11 @@ export function Comunidad() {
     () => {
       const mm = gsap.matchMedia();
       mm.add(ESCRITORIO_CON_MOVIMIENTO, () => {
+        // Solo aquí se activa el modo marquesina (duplicados + máscara); sin animación,
+        // sin JS o en móvil queda una fila deslizable donde se ven todas las marcas
+        const bloque = seccion.current?.querySelector<HTMLElement>("[data-bloque-marcas]");
+        if (bloque) bloque.dataset.animada = "";
+
         // Marquesina infinita; el scroll la acelera momentáneamente
         const marquesina = gsap.to("[data-marquesina]", { xPercent: -50, duration: 40, ease: "none", repeat: -1 });
         pausarFueraDeVista(marquesina, document.querySelector("[data-marquesina]"));
@@ -66,6 +71,10 @@ export function Comunidad() {
             });
           },
         });
+
+        return () => {
+          if (bloque) delete bloque.dataset.animada;
+        };
       });
     },
     { scope: seccion },
@@ -100,12 +109,18 @@ export function Comunidad() {
       </div>
 
       {/* Marquesina de marcas aliadas (en móvil, fila deslizable) */}
-      <div className="mt-20">
+      <div data-bloque-marcas className="group mt-20">
         <h3 className="mb-6 text-center text-xs font-extrabold uppercase tracking-[0.2em] text-gris">
           De la mano de marcas que quieres
         </h3>
-        <div className="sin-barra relative flex overflow-x-auto px-5 md:overflow-hidden md:px-0 md:[mask-image:linear-gradient(90deg,transparent,black_8%,black_92%,transparent)]">
-          <ul data-marquesina aria-label="Marcas aliadas" className="flex w-max shrink-0 gap-3 pr-3 md:gap-4 md:pr-4">
+        {/* Región con foco para poder recorrerla con el teclado cuando es deslizable */}
+        <div
+          role="region"
+          aria-label="Marcas aliadas"
+          tabIndex={0}
+          className="sin-barra relative flex overflow-x-auto px-5 group-data-[animada]:overflow-hidden group-data-[animada]:px-0 group-data-[animada]:[mask-image:linear-gradient(90deg,transparent,black_8%,black_92%,transparent)]"
+        >
+          <ul data-marquesina className="flex w-max shrink-0 gap-3 pr-3 md:gap-4 md:pr-4">
             {[...MARCAS_ALIADAS, ...MARCAS_ALIADAS].map((marca, indice) => {
               const duplicado = indice >= MARCAS_ALIADAS.length;
               return (
@@ -113,7 +128,7 @@ export function Comunidad() {
                   key={`${marca.nombre}-${indice}`}
                   aria-hidden={duplicado || undefined}
                   className={`h-24 w-40 shrink-0 items-center justify-center rounded-3xl bg-white p-4 shadow-sm ring-1 ring-azul/10 md:h-28 md:w-48 ${
-                    duplicado ? "hidden md:flex" : "flex"
+                    duplicado ? "hidden group-data-[animada]:flex" : "flex"
                   }`}
                 >
                   <Image
@@ -127,7 +142,7 @@ export function Comunidad() {
             })}
           </ul>
         </div>
-        <p className="mt-4 text-center text-[0.7rem] text-gris md:hidden">Desliza para ver más →</p>
+        <p className="mt-4 text-center text-[0.7rem] text-gris group-data-[animada]:hidden">Desliza para ver más →</p>
       </div>
     </section>
   );
