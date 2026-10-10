@@ -9,8 +9,22 @@ export interface ProductoCatalogo {
   precioUsd: number;
   unidad: UnidadVenta;
   categoria: string;
-  /** Palabras clave normalizadas (sin acentos, singular) */
+  /** Palabras clave normalizadas (sin acentos, singular); la primera es el sustantivo principal */
   claves: string[];
+  /** Datos del catálogo real de sigo.com.ve (ausentes en la demostración) */
+  imagen?: string;
+  ruta?: string;
+  disponible?: boolean;
+  departamento?: string;
+  /** Nivel intermedio del menú (p. ej. "Harinas" para la categoría "Maíz") */
+  grupo?: string;
+  /** Precio antes de la oferta, si la hay */
+  precioAnteriorUsd?: number;
+  /** Precio y disponibilidad por sucursal (el precio base es el de Costazul) */
+  precioSambilUsd?: number;
+  disponibleEn?: { costazul: boolean; sambil: boolean };
+  /** Promoción vigente en % (la define SIGO desde el panel interno) */
+  descuentoPorcentaje?: number;
 }
 
 export const CATALOGO_DEMO: readonly ProductoCatalogo[] = [

@@ -202,3 +202,37 @@ export function IconoTrofeo(props: PropsIcono) {
     </svg>
   );
 }
+
+export function IconoBuscar(props: PropsIcono) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </svg>
+  );
+}
+
+export function IconoCasa(props: PropsIcono) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M3 10.5 12 3l9 7.5" />
+      <path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5" />
+    </svg>
+  );
+}
+
+export function IconoMarcador(props: PropsIcono) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Z" />
+    </svg>
+  );
+}
+
+export function IconoFiltro(props: PropsIcono) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M4 5h16M7 12h10M10 19h4" />
+    </svg>
+  );
+}

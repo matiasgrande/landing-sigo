@@ -9,7 +9,7 @@ import {
   SIN_MOVIMIENTO,
   ESCRITORIO_CON_MOVIMIENTO,
 } from "@/lib/gsap";
-import { URL_ECOMMERCE, calcularAniosTrayectoria } from "@/datos/contacto";
+import { URL_TIENDA, calcularAniosTrayectoria } from "@/datos/contacto";
 import { Sonrisa } from "@/componentes/Revelar";
 import { formatearUsd } from "@/lib/useTasaBcv";
 import { IconoCarrito, IconoChat, IconoUbicacion } from "@/componentes/Iconos";
@@ -17,9 +17,10 @@ import { IconoCarrito, IconoChat, IconoUbicacion } from "@/componentes/Iconos";
 const PALABRAS_TITULO = ["Sirviendo", "con", "amor"];
 
 const LINEAS_VISTA_PREVIA = [
-  { texto: "2 Harina P.A.N.", precio: 2.4 },
-  { texto: "500 g Queso blanco", precio: 3.75 },
-  { texto: "1 Docena de huevos", precio: 2.9 },
+  // Precios del catálogo real (Costazul); el total supera la compra mínima de la tienda
+  { texto: "2 Harina P.A.N.", precio: 1.98 },
+  { texto: "500 g Queso blanco", precio: 8.76 },
+  { texto: "1 Cartón de huevos", precio: 3.49 },
 ];
 const TOTAL_VISTA_PREVIA = LINEAS_VISTA_PREVIA.reduce((suma, linea) => suma + linea.precio, 0);
 
@@ -185,7 +186,7 @@ export function Hero() {
           </p>
           <div data-hero="botones" className="mt-9 flex flex-col gap-3 sm:flex-row">
             <a
-              href={URL_ECOMMERCE}
+              href={URL_TIENDA}
               className="inline-flex items-center justify-center gap-2 rounded-full bg-verde px-7 py-4 text-lg font-extrabold shadow-lg shadow-verde/30 transition hover:-translate-y-0.5 hover:bg-verde-700"
             >
               <IconoCarrito className="h-5 w-5" /> Compra online

@@ -1,0 +1,126 @@
+import { CATALOGO_DEMO, type ProductoCatalogo } from "@/datos/catalogo";
+import { crearIndice, palabrasClave, type IndiceCatalogo } from "@/lib/indiceCatalogo";
+
+const RUTA_BASE = process.env.NEXT_PUBLIC_RUTA_BASE ?? "";
+const URL_CATALOGO = `${RUTA_BASE}/catalogo-asistente.json`;
+// Tienda activa (www.sigo.com.ve está desactualizada); las imágenes se sirven desde cualquier subdominio
+const URL_IMAGENES = "https://costazul.sigo.com.ve/images/thumbs/";
+/** Inicial de la tienda en el enlace compacto -> dominio */
+const TIENDAS: Record<string, string> = {
+  c: "https://costazul.sigo.com.ve",
+  s: "https://sambil.sigo.com.ve",
+};
+// Pasado este tiempo se responde con la demo (y se reintenta luego) en vez de dejar al usuario esperando
+const LIMITE_ESPERA_MS = 8000;
+
+/** Formato compacto (v2) generado por scripts/preparar-catalogo-asistente.mjs */
+type FilaProducto = [
+  id: number,
+  nombre: string,
+  precioUsd: number,
+  categoria: number,
+  imagen: string | null,
+  /** Bits: 1 = disponible en Costazul, 2 = en Sambil */
+  disponibilidad: number,
+  enlace: string | null,
+  precioAnteriorUsd?: number,
+  /** 0 = igual al precio base */
+  precioSambilUsd?: number,
+];
+
+/** [nombre, índice de departamento, grupo intermedio] */
+type FilaCategoria = [nombre: string, departamento: number, grupo: string];
+
+interface CatalogoCompacto {
+  extraidoEn: string;
+  departamentos: string[];
+  categorias: FilaCategoria[];
+  productos: FilaProducto[];
+}
+
+function esCatalogoCompacto(datos: unknown): datos is CatalogoCompacto {
+  if (typeof datos !== "object" || datos === null) return false;
+  const registro = datos as Record<string, unknown>;
+  return (
+    typeof registro.extraidoEn === "string" &&
+    Array.isArray(registro.departamentos) &&
+    Array.isArray(registro.categorias) &&
+    Array.isArray(registro.productos) &&
+    registro.productos.length > 0
+  );
+}
+
+/** "Queso Blanco Duro Kg" se vende por peso; "Arroz Mary 1 Kg" es un paquete */
+export function seVendePorKg(nombre: string): boolean {
+  const texto = nombre.toLowerCase();
+  if (/\b(por|x)\s*(kg|kilo)\b|\bgranel\b/.test(texto)) return true;
+  // "kg" sin un número delante (ej.: "Pechuga De Pollo Kg")
+  return [...texto.matchAll(/(\d[\d.,]*\s*)?\bkgs?\b\.?/g)].some((m) => !m[1]);
+}
+
+/** Presentación tomada del nombre: "Arroz Integral Mary 800 Gr." -> "800 Gr." */
+function presentacionDe(nombre: string, porKg: boolean): string {
+  if (porKg) return "por kg";
+  const medida = /\d[\d.,]*\s*(?:x\s*\d[\d.,]*\s*)?(?:kgs?|k|grs?|g|ml|lts?|l|cc|oz|und|unds|unid|pzas?|mts?|cm|rollos?|hojas?)\b\.?/i.exec(nombre);
+  return medida ? medida[0].trim() : "unidad";
+}
+
+function adaptar(datos: CatalogoCompacto): ProductoCatalogo[] {
+  return datos.productos.map(([id, nombre, precioUsd, categoria, imagen, disponibilidad, enlace, precioAnterior, precioSambil]) => {
+    const tienda = enlace ? TIENDAS[enlace.charAt(0)] : undefined;
+    const porKg = seVendePorKg(nombre);
+    const [nombreCategoria = "", indiceDepartamento = -1, grupo = ""] = datos.categorias[categoria] ?? [];
+    return {
+      id: String(id),
+      nombre,
+      presentacion: presentacionDe(nombre, porKg),
+      precioUsd,
+      unidad: porKg ? "kg" : "unidad",
+      categoria: nombreCategoria,
+      departamento: datos.departamentos[indiceDepartamento] ?? "Otros",
+      grupo: grupo || undefined,
+      claves: palabrasClave(nombre),
+      imagen: imagen ? URL_IMAGENES + imagen : undefined,
+      ruta: tienda && enlace ? tienda + enlace.slice(1) : undefined,
+      disponible: disponibilidad > 0,
+      disponibleEn: { costazul: (disponibilidad & 1) === 1, sambil: (disponibilidad & 2) === 2 },
+      ...(precioAnterior ? { precioAnteriorUsd: precioAnterior } : {}),
+      ...(precioSambil ? { precioSambilUsd: precioSambil } : {}),
+    };
+  });
+}
+
+let promesa: Promise<IndiceCatalogo> | null = null;
+/** Momento del último fallo: mientras sea reciente se responde con la demo sin volver a esperar */
+let ultimoFallo = 0;
+const ESPERA_REINTENTO_MS = 30000;
+
+/**
+ * Carga (una sola vez) el catálogo real extraído de sigo.com.ve y lo indexa.
+ * Si la red falla o el archivo no es válido, usa el catálogo de demostración y lo reintenta
+ * pasados 30 s (o antes con `forzar`).
+ */
+export function cargarCatalogo(forzar = false): Promise<IndiceCatalogo> {
+  const falloVencido = ultimoFallo > 0 && Date.now() - ultimoFallo > ESPERA_REINTENTO_MS;
+  if (promesa && !forzar && !falloVencido) return promesa;
+  if (promesa && ultimoFallo === 0) return promesa;
+  promesa = (async () => {
+    const controlador = new AbortController();
+    const limite = window.setTimeout(() => controlador.abort(), LIMITE_ESPERA_MS);
+    try {
+      const respuesta = await fetch(URL_CATALOGO, { signal: controlador.signal });
+      if (!respuesta.ok) throw new Error(`HTTP ${respuesta.status}`);
+      const datos: unknown = await respuesta.json();
+      if (!esCatalogoCompacto(datos)) throw new Error("Catálogo con formato inválido");
+      ultimoFallo = 0;
+      return crearIndice(adaptar(datos), "real", datos.extraidoEn);
+    } catch {
+      // Sin red o archivo dañado: la demo sigue con el catálogo de ejemplo
+      ultimoFallo = Date.now();
+      return crearIndice(CATALOGO_DEMO, "demo");
+    } finally {
+      window.clearTimeout(limite);
+    }
+  })();
+  return promesa;
+}

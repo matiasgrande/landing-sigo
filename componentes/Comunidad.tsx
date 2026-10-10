@@ -55,6 +55,14 @@ export function Comunidad() {
         const marquesina = gsap.to("[data-marquesina]", { xPercent: -50, duration: 40, ease: "none", repeat: -1 });
         pausarFueraDeVista(marquesina, document.querySelector("[data-marquesina]"));
 
+        // WCAG 2.2.2: se detiene al pasar el cursor o enfocar una marca
+        const pausar = () => marquesina.pause();
+        const reanudar = () => marquesina.resume();
+        bloque?.addEventListener("pointerenter", pausar);
+        bloque?.addEventListener("pointerleave", reanudar);
+        bloque?.addEventListener("focusin", pausar);
+        bloque?.addEventListener("focusout", reanudar);
+
         ScrollTrigger.create({
           trigger: seccion.current,
           start: "top bottom",
@@ -77,6 +85,10 @@ export function Comunidad() {
         return () => {
           if (bloque) delete bloque.dataset.animada;
           region?.setAttribute("tabindex", "0");
+          bloque?.removeEventListener("pointerenter", pausar);
+          bloque?.removeEventListener("pointerleave", reanudar);
+          bloque?.removeEventListener("focusin", pausar);
+          bloque?.removeEventListener("focusout", reanudar);
         };
       });
     },

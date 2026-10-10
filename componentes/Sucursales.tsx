@@ -314,7 +314,7 @@ export function Sucursales() {
                         {sucursal.telefono && (
                           <>
                             {" · "}
-                            <a href={`tel:${sucursal.telefono.replace(/[^+\d]/g, "")}`} className="font-bold text-azul underline-offset-2 hover:underline">
+                            <a href={`tel:${sucursal.telefono.replace(/[^+\d]/g, "")}`} className="inline-block py-1 font-bold text-azul underline-offset-2 hover:underline">
                               {sucursal.telefono}
                             </a>
                           </>

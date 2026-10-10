@@ -30,6 +30,9 @@ export const metadata: Metadata = {
     description: "8 tiendas, delivery a toda la isla y tu mercado a un mensaje de distancia.",
   },
   twitter: { card: "summary_large_image" },
+  // Instalable en iPhone desde "Agregar a pantalla de inicio"
+  appleWebApp: { capable: true, title: "SIGO", statusBarStyle: "default" },
+  icons: { apple: `${process.env.NEXT_PUBLIC_RUTA_BASE ?? ""}/iconos/apple-touch-icon.png` },
 };
 
 export const viewport: Viewport = {
@@ -96,9 +99,9 @@ export default function DisenoRaiz({ children }: Readonly<{ children: ReactNode 
           }}
         />
         {/* Sin JS: la barra inferior y el botón de WhatsApp quedan visibles para navegar,
-            y se oculta el botón de menú porque no puede abrirse */}
+            y se ocultan el botón de menú y el formulario del asistente porque no pueden funcionar */}
         <noscript>
-          <style>{"[data-barra],[data-flotante]{visibility:visible}[data-boton-menu]{display:none}"}</style>
+          <style>{"[data-barra],[data-flotante]{visibility:visible}[data-boton-menu],form#escribe-tu-lista{display:none}"}</style>
         </noscript>
         <a
           href="#contenido"

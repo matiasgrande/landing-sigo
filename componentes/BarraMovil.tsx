@@ -3,7 +3,7 @@
 import { useRef } from "react";
 import { ID_FORMULARIO_LISTA } from "@/componentes/AsistenteCarrito";
 import { gsap, useGSAP, ScrollTrigger } from "@/lib/gsap";
-import { URL_ECOMMERCE, WHATSAPP_ATENCION, crearEnlaceWhatsApp } from "@/datos/contacto";
+import { URL_TIENDA, WHATSAPP_ATENCION, crearEnlaceWhatsApp } from "@/datos/contacto";
 import { IconoCarrito, IconoChat, IconoTienda, IconoWhatsApp } from "@/componentes/Iconos";
 
 /** Barra inferior fija en móvil y botón flotante de WhatsApp en escritorio */
@@ -22,7 +22,8 @@ export function BarraMovil() {
         start: () => window.innerHeight * 0.6,
         end: "max",
         onToggle: (instancia) => {
-          const visible = instancia.isActive;
+          // Visible desde el inicio hasta el final: isActive se apaga al llegar a "max" y la ocultaba
+          const visible = instancia.scroll() >= instancia.start;
           const duracion = reducido ? 0 : 0.45;
           gsap.to("[data-barra]", {
             yPercent: visible ? 0 : 150,
@@ -49,10 +50,10 @@ export function BarraMovil() {
       <nav
         data-barra
         aria-label="Accesos rápidos"
-        className="invisible fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 rounded-3xl bg-white p-1.5 shadow-xl shadow-azul/20 ring-1 ring-azul/10 lg:hidden"
+        className="invisible fixed inset-x-3 bottom-3 z-40 grid grid-cols-4 [@media(max-height:480px)_and_(orientation:landscape)]:hidden rounded-3xl bg-white p-1.5 shadow-xl shadow-azul/20 ring-1 ring-azul/10 lg:hidden"
       >
         {[
-          { href: URL_ECOMMERCE, texto: "Comprar", Icono: IconoCarrito, externo: false },
+          { href: URL_TIENDA, texto: "Comprar", Icono: IconoCarrito, externo: false },
           { href: `#${ID_FORMULARIO_LISTA}`, texto: "Mi lista", Icono: IconoChat, externo: false },
           { href: "#tiendas", texto: "Tiendas", Icono: IconoTienda, externo: false },
           { href: enlaceWhatsApp, texto: "WhatsApp", Icono: IconoWhatsApp, externo: true },
