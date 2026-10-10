@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import logoSigo from "@/recursos/logo-sigo.png";
 import { useTienda } from "@/componentes/tienda/ContextoTienda";
 import { Buscador } from "@/componentes/tienda/Buscador";
+import { SLUG_OFERTAS } from "@/componentes/tienda/Listado";
 import { useTasa } from "@/componentes/ContextoTasa";
 import { IconoCarrito, IconoUbicacion } from "@/componentes/Iconos";
 import { formatearFechaTasa, formatearUsd } from "@/lib/useTasaBcv";
@@ -29,7 +30,7 @@ export function useDepartamentos(): { nombre: string; slug: string; cantidad: nu
 }
 
 export function CabeceraTienda() {
-  const { entrega, totalArticulos, subtotal, setCarritoAbierto, setSelectorEntregaAbierto, navegar, ruta } = useTienda();
+  const { entrega, totalArticulos, subtotal, setCarritoAbierto, setSelectorEntregaAbierto, navegar, ruta, pedidos } = useTienda();
   const { tasa } = useTasa();
   const departamentos = useDepartamentos();
   const fechaTasa = tasa ? formatearFechaTasa(tasa.fecha) : "";
@@ -109,6 +110,31 @@ export function CabeceraTienda() {
               Inicio
             </button>
           </li>
+          {/* Accesos especiales: ofertas, recetas y pedidos anteriores */}
+          {[
+            { clave: "ofertas", texto: "Ofertas", activo: ruta.vista === "listado" && ruta.departamento === SLUG_OFERTAS,
+              ir: () => navegar({ vista: "listado", departamento: SLUG_OFERTAS, categoria: null, consulta: null, pagina: 1 }) },
+            { clave: "recetas", texto: "Recetas y temporada", activo: ruta.vista === "recetas",
+              ir: () => navegar({ vista: "recetas", departamento: null, categoria: null, consulta: null }) },
+            ...(pedidos.length > 0
+              ? [{ clave: "pedidos", texto: "Mis pedidos", activo: ruta.vista === "pedidos",
+                  ir: () => navegar({ vista: "pedidos", departamento: null, categoria: null, consulta: null }) }]
+              : []),
+          ].map((acceso) => (
+            <li key={acceso.clave}>
+              <button
+                type="button"
+                onClick={acceso.ir}
+                aria-current={acceso.activo ? "page" : undefined}
+                className={`min-h-10 whitespace-nowrap rounded-full px-3 text-sm font-extrabold ${
+                  acceso.activo ? "bg-coral-700 text-white" : "text-coral-700 hover:bg-coral-700/10"
+                }`}
+              >
+                {acceso.texto}
+              </button>
+            </li>
+          ))}
+          <li aria-hidden className="my-2 w-px shrink-0 bg-azul-100" />
           {departamentos.map((d) => (
             <li key={d.slug}>
               <button

@@ -15,11 +15,32 @@ import {
   type ClaveSucursal,
   type Entrega,
 } from "@/lib/tienda/comercio";
+import {
+  CLAVE_PROMOCIONES,
+  aplicarPromociones,
+  leerPromociones,
+  promocionesDeEjemplo,
+  promocionesVigentes,
+  type Promocion,
+} from "@/lib/tienda/promociones";
+import { registrarEvento } from "@/lib/tienda/eventos";
+import { CLAVE_PEDIDOS, guardarPedido, leerPedidos, type PedidoGuardado } from "@/lib/tienda/pedidos";
 
 const CLAVE_GUARDADOS = "sigo:guardados-tienda";
 const CLAVE_ENTREGA = "sigo:entrega-tienda";
+const CLAVE_SUSTITUTOS = "sigo:sustitutos";
+const CLAVE_AHORRO_DATOS = "sigo:ahorro-datos";
 
-export type Vista = "inicio" | "listado" | "buscar" | "checkout";
+/** Qué hacer si un producto no está al preparar el pedido */
+export type PreferenciaSustituto = "similar" | "llamar" | "ninguno";
+export const TEXTO_SUSTITUTO: Record<PreferenciaSustituto, string> = {
+  similar: "Cámbialo por uno similar",
+  llamar: "Llámame antes",
+  ninguno: "No lo sustituyas",
+};
+
+export type Vista = "inicio" | "listado" | "buscar" | "checkout" | "pedidos" | "recetas";
+const VISTAS_DIRECTAS: Vista[] = ["checkout", "pedidos", "recetas"];
 
 export interface Ruta {
   vista: Vista;
@@ -76,6 +97,17 @@ interface ValorTienda {
   setCarritoAbierto: (abierto: boolean) => void;
   selectorEntregaAbierto: boolean;
   setSelectorEntregaAbierto: (abierto: boolean) => void;
+  /** Promociones vigentes (las de ejemplo si SIGO aún no creó ninguna) */
+  promociones: Promocion[];
+  sustitutos: Record<string, PreferenciaSustituto>;
+  setSustituto: (id: string, preferencia: PreferenciaSustituto) => void;
+  pedidos: PedidoGuardado[];
+  registrarPedido: (pedido: PedidoGuardado) => void;
+  /** Agrega al carrito lo que siga disponible de un pedido anterior; devuelve cuántos productos entraron */
+  repetirPedido: (pedido: PedidoGuardado) => number;
+  ahorroDatos: boolean;
+  setAhorroDatos: (activo: boolean) => void;
+  enLinea: boolean;
 }
 
 const ContextoTienda = createContext<ValorTienda | null>(null);
@@ -98,7 +130,8 @@ function leerRuta(): Ruta {
   const parametros = new URLSearchParams(window.location.search);
   const consulta = parametros.get("q");
   const departamento = parametros.get("d");
-  const vista: Vista = parametros.get("v") === "checkout" ? "checkout" : consulta ? "buscar" : departamento ? "listado" : "inicio";
+  const directa = VISTAS_DIRECTAS.find((v) => v === parametros.get("v"));
+  const vista: Vista = directa ?? (consulta ? "buscar" : departamento ? "listado" : "inicio");
   const orden = parametros.get("o");
   const pagina = Number(parametros.get("pg"));
   const paso = Number(parametros.get("ps"));
@@ -117,7 +150,7 @@ function leerRuta(): Ruta {
 
 function escribirRuta(ruta: Ruta): string {
   const parametros = new URLSearchParams();
-  if (ruta.vista === "checkout") parametros.set("v", "checkout");
+  if (VISTAS_DIRECTAS.includes(ruta.vista)) parametros.set("v", ruta.vista);
   if (ruta.vista === "checkout" && ruta.paso > 1) parametros.set("ps", String(ruta.paso));
   if (ruta.consulta) parametros.set("q", ruta.consulta);
   if (ruta.departamento) parametros.set("d", ruta.departamento);
@@ -169,8 +202,16 @@ const esEntrega = (v: unknown): v is Entrega =>
   ["costazul", "sambil"].includes((v as Entrega).sucursal) &&
   ((v as Entrega).municipio === null || esMunicipioValido((v as Entrega).municipio));
 
+const esSustitutos = (v: unknown): v is Record<string, PreferenciaSustituto> =>
+  typeof v === "object" && v !== null && Object.values(v).every((x) => x === "similar" || x === "llamar" || x === "ninguno");
+
 export function ProveedorTienda({ children }: { children: ReactNode }) {
-  const [indice, setIndice] = useState<IndiceCatalogo | null>(null);
+  const [indiceBase, setIndice] = useState<IndiceCatalogo | null>(null);
+  const [promocionesGuardadas, setPromocionesGuardadas] = useState<Promocion[] | null>(null);
+  const [sustitutos, setSustitutos] = useState<Record<string, PreferenciaSustituto>>({});
+  const [pedidos, setPedidos] = useState<PedidoGuardado[]>([]);
+  const [ahorroDatos, setAhorroDatosEstado] = useState(false);
+  const [enLinea, setEnLinea] = useState(true);
   const [ruta, setRuta] = useState<Ruta>(RUTA_INICIAL);
   const rutaActual = useRef<Ruta>(RUTA_INICIAL);
   const [cantidades, setCantidades] = useState<Record<string, number>>({});
@@ -183,6 +224,9 @@ export function ProveedorTienda({ children }: { children: ReactNode }) {
   // Estado guardado y ruta actual (solo en el cliente)
   useEffect(() => {
     const leerGuardado = () => {
+      setPromocionesGuardadas(leerPromociones());
+      setSustitutos(leerJson(CLAVE_SUSTITUTOS, {}, esSustitutos));
+      setPedidos(leerPedidos());
       setCantidades(leerCantidades());
       setIdsGuardados(leerJson(CLAVE_GUARDADOS, [], esListaIds));
       setEntregaEstado(leerJson(CLAVE_ENTREGA, ENTREGA_INICIAL, esEntrega));
@@ -190,9 +234,19 @@ export function ProveedorTienda({ children }: { children: ReactNode }) {
     leerGuardado();
     // Otra pestaña cambió el carrito o la entrega: se adopta su versión en vez de pisarla
     const alCambiarAlmacenamiento = (evento: StorageEvent) => {
-      if (evento.key === null || [CLAVE_CARRITO, CLAVE_GUARDADOS, CLAVE_ENTREGA].includes(evento.key)) leerGuardado();
+      if (evento.key === null || [CLAVE_CARRITO, CLAVE_GUARDADOS, CLAVE_ENTREGA, CLAVE_PROMOCIONES, CLAVE_PEDIDOS, CLAVE_SUSTITUTOS].includes(evento.key)) {
+        leerGuardado();
+      }
     };
     window.addEventListener("storage", alCambiarAlmacenamiento);
+    // Ahorro de datos: lo que eligió la persona o, si no eligió, lo que pide su navegador
+    const conexion = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
+    setAhorroDatosEstado(leerJson(CLAVE_AHORRO_DATOS, conexion?.saveData === true, (v): v is boolean => typeof v === "boolean"));
+    setEnLinea(navigator.onLine);
+    const alConectar = () => setEnLinea(true);
+    const alDesconectar = () => setEnLinea(false);
+    window.addEventListener("online", alConectar);
+    window.addEventListener("offline", alDesconectar);
     rutaActual.current = leerRuta();
     setRuta(rutaActual.current);
     setListo(true);
@@ -209,6 +263,8 @@ export function ProveedorTienda({ children }: { children: ReactNode }) {
       activo = false;
       window.removeEventListener("popstate", alNavegar);
       window.removeEventListener("storage", alCambiarAlmacenamiento);
+      window.removeEventListener("online", alConectar);
+      window.removeEventListener("offline", alDesconectar);
     };
   }, []);
 
@@ -218,6 +274,16 @@ export function ProveedorTienda({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (listo) guardarJson(CLAVE_GUARDADOS, idsGuardados);
   }, [idsGuardados, listo]);
+  useEffect(() => {
+    if (listo) guardarJson(CLAVE_SUSTITUTOS, sustitutos);
+  }, [sustitutos, listo]);
+
+  // Catálogo con las promociones vigentes aplicadas
+  const promociones = useMemo(
+    () => (indiceBase ? promocionesVigentes(promocionesGuardadas ?? promocionesDeEjemplo(indiceBase)) : []),
+    [indiceBase, promocionesGuardadas],
+  );
+  const indice = useMemo(() => (indiceBase ? aplicarPromociones(indiceBase, promociones) : null), [indiceBase, promociones]);
 
   const navegar = useCallback((cambios: Partial<Ruta>, opciones?: { reemplazar?: boolean }) => {
     const siguiente = { ...rutaActual.current, ...cambios };
@@ -275,6 +341,7 @@ export function ProveedorTienda({ children }: { children: ReactNode }) {
   }, []);
   const agregar = useCallback(
     (id: string, delta = 1) => {
+      if (delta > 0) registrarEvento({ tipo: "agregar", id, cantidad: delta });
       setCantidades((actual) => {
         const siguiente = { ...actual };
         const nueva = Math.min(MAXIMO_POR_PRODUCTO, Math.max(0, (actual[id] ?? 0) + delta));
@@ -304,6 +371,28 @@ export function ProveedorTienda({ children }: { children: ReactNode }) {
   const setEntrega = useCallback((nueva: Entrega) => {
     setEntregaEstado(nueva);
     guardarJson(CLAVE_ENTREGA, nueva);
+  }, []);
+
+  const setSustituto = useCallback((id: string, preferencia: PreferenciaSustituto) => {
+    setSustitutos((actual) => ({ ...actual, [id]: preferencia }));
+  }, []);
+  const registrarPedido = useCallback((pedido: PedidoGuardado) => setPedidos(guardarPedido(pedido)), []);
+  const repetirPedido = useCallback(
+    (pedido: PedidoGuardado) => {
+      let agregados = 0;
+      for (const linea of pedido.lineas) {
+        const producto = porId.get(linea.id);
+        if (!producto || !disponibleEn(producto, entrega.sucursal)) continue;
+        agregar(linea.id, linea.cantidad);
+        agregados++;
+      }
+      return agregados;
+    },
+    [porId, entrega.sucursal, agregar],
+  );
+  const setAhorroDatos = useCallback((activo: boolean) => {
+    setAhorroDatosEstado(activo);
+    guardarJson(CLAVE_AHORRO_DATOS, activo);
   }, []);
 
   const reintentarCatalogo = useCallback(() => {
@@ -337,11 +426,21 @@ export function ProveedorTienda({ children }: { children: ReactNode }) {
       setCarritoAbierto,
       selectorEntregaAbierto,
       setSelectorEntregaAbierto,
+      promociones,
+      sustitutos,
+      setSustituto,
+      pedidos,
+      registrarPedido,
+      repetirPedido,
+      ahorroDatos,
+      setAhorroDatos,
+      enLinea,
     }),
     [
       indice, porId, reintentarCatalogo, ruta, navegar, cantidades, lineas, lineasCobrables, guardados, totalArticulos,
       subtotal, agregar, fijarCantidad, quitar, guardarParaDespues, moverAlCarrito, vaciar, entrega, setEntrega, sucursal,
-      carritoAbierto, selectorEntregaAbierto,
+      carritoAbierto, selectorEntregaAbierto, promociones, sustitutos, setSustituto, pedidos, registrarPedido, repetirPedido,
+      ahorroDatos, setAhorroDatos, enLinea,
     ],
   );
 

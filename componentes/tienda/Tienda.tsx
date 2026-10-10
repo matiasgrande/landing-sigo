@@ -9,6 +9,8 @@ import { FichaProducto } from "@/componentes/tienda/FichaProducto";
 import { CarritoLateral } from "@/componentes/tienda/CarritoLateral";
 import { SelectorEntrega } from "@/componentes/tienda/SelectorEntrega";
 import { Checkout } from "@/componentes/tienda/Checkout";
+import { VistaPedidos } from "@/componentes/tienda/Pedidos";
+import { VistaRecetas } from "@/componentes/tienda/Recetas";
 import { ID_BUSCADOR } from "@/componentes/tienda/Buscador";
 import { ID_LISTA_RAPIDA } from "@/componentes/tienda/ListaRapida";
 import { IconoBuscar, IconoCarrito, IconoCasa, IconoChat } from "@/componentes/Iconos";
@@ -27,6 +29,28 @@ function AvisoCatalogo() {
         </button>
       </div>
     </div>
+  );
+}
+
+/** Sin señal: se puede seguir armando el carrito con el catálogo guardado */
+function AvisoConexion() {
+  const { enLinea } = useTienda();
+  if (enLinea) return null;
+  return (
+    <div role="status" className="bg-azul-900 px-4 py-2 text-center text-sm font-bold text-white">
+      Sin conexión: sigue armando tu carrito; los precios son los de tu última visita.
+    </div>
+  );
+}
+
+/** Interruptor de ahorro de datos (sin fotos de productos) */
+function InterruptorAhorroDatos() {
+  const { ahorroDatos, setAhorroDatos } = useTienda();
+  return (
+    <label className="flex min-h-11 cursor-pointer items-center gap-2 font-bold text-white">
+      <input type="checkbox" checked={ahorroDatos} onChange={(e) => setAhorroDatos(e.target.checked)} className="h-5 w-5 accent-sol" />
+      Ahorro de datos (sin fotos)
+    </label>
   );
 }
 
@@ -81,20 +105,27 @@ export function Tienda() {
   return (
     <>
       <CabeceraTienda />
+      <AvisoConexion />
       <AvisoCatalogo />
       <main id="contenido" className="min-h-[60vh] pb-28 md:pb-10">
         {ruta.vista === "inicio" && <InicioTienda />}
         {(ruta.vista === "listado" || ruta.vista === "buscar") && <Listado />}
         {ruta.vista === "checkout" && <Checkout />}
+        {ruta.vista === "pedidos" && <VistaPedidos />}
+        {ruta.vista === "recetas" && <VistaRecetas />}
       </main>
       <footer className="bg-azul-900 px-4 pb-28 pt-8 text-sm text-white/80 md:pb-8">
         <div className="mx-auto flex max-w-7xl flex-col gap-2 sm:flex-row sm:justify-between">
           <p>
             Prototipo de la nueva tienda SIGO con el catálogo público de Costazul y Sambil. Precios referenciales; los pedidos no se registran.
           </p>
-          <p className="flex gap-4">
+          <InterruptorAhorroDatos />
+          <p className="flex flex-wrap items-center gap-4">
             <Link href="/" className="font-bold text-white underline">
               Volver a la landing
+            </Link>
+            <Link href="/panel/" className="font-bold text-white underline">
+              Panel interno
             </Link>
             <a href={crearEnlaceWhatsApp(WHATSAPP_ATENCION, "¡Hola Sigo!")} target="_blank" rel="noopener noreferrer" className="font-bold text-white underline">
               WhatsApp

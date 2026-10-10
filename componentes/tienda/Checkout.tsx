@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { useTienda, type PasoCheckout } from "@/componentes/tienda/ContextoTienda";
+import { TEXTO_SUSTITUTO, useTienda, type PasoCheckout, type PreferenciaSustituto } from "@/componentes/tienda/ContextoTienda";
+import { registrarEvento } from "@/lib/tienda/eventos";
 import { mensajePedido, plural } from "@/componentes/tienda/CarritoLateral";
 import { useTasa } from "@/componentes/ContextoTasa";
 import { IconoWhatsApp } from "@/componentes/Iconos";
+import { ComparadorSucursales } from "@/componentes/tienda/Comparador";
 import { TARIFAS_MUNICIPIO } from "@/datos/entregas";
 import { WHATSAPP_ATENCION, WHATSAPP_PAGOS, crearEnlaceWhatsApp } from "@/datos/contacto";
 import {
@@ -63,6 +65,10 @@ interface DatosCheckout {
   referencia: string;
   franja: string;
   metodo: string;
+  /** "1" si es una compra para otra persona (familia en Margarita, regalo, compra desde el exterior) */
+  paraOtro: string;
+  receptorNombre: string;
+  receptorTelefono: string;
 }
 
 interface PedidoConfirmado {
@@ -70,9 +76,24 @@ interface PedidoConfirmado {
   mensaje: string;
   /** Pagos en divisas y Pago Móvil van al WhatsApp de pagos */
   aPagos: boolean;
+  /** Compra para otra persona: aviso listo para enviarle */
+  aviso?: { nombre: string; enlace: string };
 }
 
-const DATOS_INICIALES: DatosCheckout = { nombre: "", telefono: "", direccion: "", referencia: "", franja: "", metodo: "pago-movil" };
+const DATOS_INICIALES: DatosCheckout = {
+  nombre: "",
+  telefono: "",
+  direccion: "",
+  referencia: "",
+  franja: "",
+  metodo: "pago-movil",
+  paraOtro: "",
+  receptorNombre: "",
+  receptorTelefono: "",
+};
+
+/** Métodos cómodos para pagar desde fuera de Venezuela */
+const DESDE_EL_EXTERIOR = new Set(["zelle", "paypal", "sigo-creditos"]);
 
 function leerSesion<T>(clave: string, validar: (valor: unknown) => valor is T): T | null {
   try {
@@ -105,6 +126,20 @@ function esTelefonoValido(texto: string): boolean {
   return /^0[24]\d{9}$/.test(digitos) && !/^0(\d)\1{9}$/.test(digitos);
 }
 
+/** WhatsApp de cualquier país (quien compra puede estar fuera): +código y 8 a 15 dígitos, o un número venezolano */
+function esTelefonoInternacional(texto: string): boolean {
+  if (esTelefonoValido(texto)) return true;
+  if (!/^\+[\d\s().-]+$/.test(texto)) return false;
+  const digitos = texto.replace(/\D/g, "");
+  return digitos.length >= 8 && digitos.length <= 15 && !/^(\d)\1+$/.test(digitos);
+}
+
+/** "0412 123 4567" -> "584121234567" para wa.me */
+function aNumeroWhatsApp(texto: string): string {
+  const digitos = texto.replace(/\D/g, "");
+  return digitos.startsWith("0") ? `58${digitos.slice(1)}` : digitos;
+}
+
 /** Al menos `minimo` letras: descarta "123", "!!!" o "........" */
 const tieneLetras = (texto: string, minimo: number) => (texto.match(/\p{L}/gu) ?? []).length >= minimo;
 
@@ -116,7 +151,22 @@ function crearNumeroPedido(): string {
 }
 
 export function Checkout() {
-  const { lineas, lineasCobrables, subtotal, entrega, setEntrega, navegar, vaciar, ruta, cargando, indice, reintentarCatalogo } = useTienda();
+  const {
+    lineas,
+    lineasCobrables,
+    subtotal,
+    entrega,
+    setEntrega,
+    navegar,
+    vaciar,
+    ruta,
+    cargando,
+    indice,
+    reintentarCatalogo,
+    sustitutos,
+    setSustituto,
+    registrarPedido,
+  } = useTienda();
   const { tasa } = useTasa();
   const paso = ruta.paso;
   const [datos, setDatos] = useState<DatosCheckout>(DATOS_INICIALES);
@@ -153,6 +203,13 @@ export function Checkout() {
   const faltante = Math.max(0, aCentimos(MINIMO_COMPRA_USD) - aCentimos(subtotal)) / 100;
   const sinExistencia = lineas.length - lineasCobrables.length;
 
+  const paraOtro = datos.paraOtro === "1";
+
+  // Inicio de checkout para el panel (una vez por visita a esta pantalla)
+  useEffect(() => {
+    registrarEvento({ tipo: "checkout" });
+  }, []);
+
   const pasoValido = (destino: PasoCheckout) => destino === 1 || Object.keys(validar()).length === 0;
 
   // Recargar o entrar con ?ps=2/3 sin datos válidos: se vuelve al paso 1
@@ -169,7 +226,13 @@ export function Checkout() {
   function validar(): typeof errores {
     const nuevos: typeof errores = {};
     if (!tieneLetras(datos.nombre, 3)) nuevos.nombre = "Escribe tu nombre y apellido.";
-    if (!esTelefonoValido(datos.telefono.trim())) nuevos.telefono = "Escribe un teléfono válido, por ejemplo 0412 1234567.";
+    if (paraOtro) {
+      if (!esTelefonoInternacional(datos.telefono.trim())) nuevos.telefono = "Escribe tu WhatsApp con código de país, por ejemplo +1 305 555 0123.";
+      if (!tieneLetras(datos.receptorNombre, 3)) nuevos.receptorNombre = "Escribe el nombre de quien recibe.";
+      if (!esTelefonoValido(datos.receptorTelefono.trim())) nuevos.receptorTelefono = "Escribe un teléfono venezolano, por ejemplo 0412 1234567.";
+    } else if (!esTelefonoValido(datos.telefono.trim())) {
+      nuevos.telefono = "Escribe un teléfono válido, por ejemplo 0412 1234567.";
+    }
     if (entrega.modo === "delivery") {
       if (tarifaDelivery(entrega) === null) nuevos.municipio = "Elige el municipio de entrega.";
       if (!tieneLetras(datos.direccion, 5)) nuevos.direccion = "Escribe la dirección (urbanización, calle, casa).";
@@ -199,14 +262,38 @@ export function Checkout() {
       mensaje: "",
     };
     pedido.mensaje = [
-      mensajePedido(lineas, entrega, { subtotal, envio, igtf, total }, `¡Hola Sigo! Confirmo mi pedido ${pedido.numero}:`),
+      mensajePedido(lineas, entrega, { subtotal, envio, igtf, total }, `¡Hola Sigo! Confirmo mi pedido ${pedido.numero}:`, sustitutos),
       `Pago: ${metodo?.nombre ?? ""}`,
       entrega.modo === "delivery" ? `Dirección: ${datos.direccion.trim()}${datos.referencia.trim() ? ` (${datos.referencia.trim()})` : ""}` : "",
       `Horario: ${datos.franja}`,
-      `A nombre de: ${datos.nombre.trim()} · ${datos.telefono.trim()}`,
+      paraOtro ? `Recibe: ${datos.receptorNombre.trim()} · ${datos.receptorTelefono.trim()}` : "",
+      `${paraOtro ? "Compra y paga" : "A nombre de"}: ${datos.nombre.trim()} · ${datos.telefono.trim()}`,
     ]
       .filter(Boolean)
       .join("\n");
+    if (paraOtro) {
+      const lugar = entrega.modo === "retiro" ? `para retirar en ${SUCURSALES_TIENDA[entrega.sucursal].nombre}` : `a ${datos.direccion.trim()}`;
+      const texto = `¡Hola ${datos.receptorNombre.trim()}! Te envié un mercado de SIGO (pedido ${pedido.numero}) ${lugar}, ${datos.franja}. Un abrazo, ${datos.nombre.trim()}.`;
+      pedido.aviso = { nombre: datos.receptorNombre.trim(), enlace: `https://wa.me/${aNumeroWhatsApp(datos.receptorTelefono)}?text=${encodeURIComponent(texto)}` };
+    }
+    // Historial en el dispositivo ("Comprar de nuevo") y registro para el panel interno
+    registrarPedido({
+      numero: pedido.numero,
+      fecha: new Date().toISOString(),
+      sucursal: entrega.sucursal,
+      modo: entrega.modo,
+      lineas: lineasCobrables.map((l) => ({ id: l.producto.id, cantidad: l.cantidad, nombre: l.producto.nombre })),
+      total,
+      ...(paraOtro ? { paraOtro: datos.receptorNombre.trim() } : {}),
+    });
+    registrarEvento({
+      tipo: "pedido",
+      numero: pedido.numero,
+      total,
+      articulos: lineasCobrables.reduce((suma, l) => suma + l.cantidad, 0),
+      sucursal: entrega.sucursal,
+      paraOtro,
+    });
     // El pedido queda confirmado: el carrito se vacía ya (recargar no permite repetirlo)
     guardarSesion(CLAVE_CONFIRMADO, pedido);
     guardarSesion(CLAVE_DATOS, null);
@@ -236,6 +323,16 @@ export function Checkout() {
           >
             <IconoWhatsApp className="h-5 w-5" /> Enviar pedido por WhatsApp
           </a>
+          {confirmado.aviso && (
+            <a
+              href={confirmado.aviso.enlace}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-azul px-6 font-extrabold text-white hover:bg-azul-700"
+            >
+              <IconoWhatsApp className="h-5 w-5" /> Avisarle a {confirmado.aviso.nombre}
+            </a>
+          )}
           <button
             type="button"
             onClick={() => {
@@ -414,9 +511,53 @@ export function Checkout() {
                 ))}
               </select>
             </label>
+            <label className="flex min-h-14 cursor-pointer items-start gap-3 rounded-2xl bg-sol/25 p-4">
+              <input
+                type="checkbox"
+                checked={paraOtro}
+                onChange={(e) => actualizar("paraOtro", e.target.checked ? "1" : "")}
+                className="mt-1 h-5 w-5 shrink-0 accent-azul"
+              />
+              <span>
+                <span className="block font-extrabold text-azul">Es para otra persona</span>
+                <span className="block text-sm text-gris">
+                  Ideal si estás fuera de Venezuela: pagas tú y tu familia en Margarita lo recibe.
+                </span>
+              </span>
+            </label>
+            {paraOtro && (
+              <fieldset className="grid gap-4 rounded-2xl bg-white p-4 ring-1 ring-azul/10 sm:grid-cols-2">
+                <legend className="px-1 text-sm font-extrabold text-azul">¿Quién recibe?</legend>
+                <label className="block">
+                  <span className="text-sm font-bold text-azul">Nombre de quien recibe</span>
+                  <input
+                    value={datos.receptorNombre}
+                    onChange={(e) => actualizar("receptorNombre", e.target.value)}
+                    maxLength={80}
+                    className={campo}
+                    {...atributosError("receptorNombre")}
+                  />
+                  {error("receptorNombre")}
+                </label>
+                <label className="block">
+                  <span className="text-sm font-bold text-azul">Su teléfono en Venezuela</span>
+                  <input
+                    value={datos.receptorTelefono}
+                    onChange={(e) => actualizar("receptorTelefono", e.target.value)}
+                    type="tel"
+                    inputMode="tel"
+                    placeholder="0412 1234567"
+                    maxLength={20}
+                    className={campo}
+                    {...atributosError("receptorTelefono")}
+                  />
+                  {error("receptorTelefono")}
+                </label>
+              </fieldset>
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block">
-                <span className="text-sm font-bold text-azul">Nombre y apellido</span>
+                <span className="text-sm font-bold text-azul">{paraOtro ? "Tu nombre y apellido" : "Nombre y apellido"}</span>
                 <input
                   value={datos.nombre}
                   onChange={(e) => actualizar("nombre", e.target.value)}
@@ -428,14 +569,14 @@ export function Checkout() {
                 {error("nombre")}
               </label>
               <label className="block">
-                <span className="text-sm font-bold text-azul">Teléfono</span>
+                <span className="text-sm font-bold text-azul">{paraOtro ? "Tu WhatsApp (de cualquier país)" : "Teléfono"}</span>
                 <input
                   value={datos.telefono}
                   onChange={(e) => actualizar("telefono", e.target.value)}
                   type="tel"
                   inputMode="tel"
                   autoComplete="tel"
-                  placeholder="0412 1234567"
+                  placeholder={paraOtro ? "+1 305 555 0123" : "0412 1234567"}
                   maxLength={20}
                   className={campo}
                   {...atributosError("telefono")}
@@ -458,6 +599,9 @@ export function Checkout() {
                     <span className="block font-extrabold text-azul">
                       {m.nombre}
                       {m.igtf && <span className="ml-2 rounded-full bg-sol px-2 py-0.5 text-xs text-azul">+ IGTF 3 %</span>}
+                      {paraOtro && DESDE_EL_EXTERIOR.has(m.id) && (
+                        <span className="ml-2 rounded-full bg-verde px-2 py-0.5 text-xs text-white">Ideal desde el exterior</span>
+                      )}
                     </span>
                     <span className="block text-sm text-gris">
                       {m.detalle} · {m.confirmacion}
@@ -488,22 +632,69 @@ export function Checkout() {
                 </dd>
               </div>
               <div>
-                <dt className="font-bold text-gris">Contacto</dt>
+                <dt className="font-bold text-gris">{paraOtro ? "Compra y paga" : "Contacto"}</dt>
                 <dd className="font-semibold [overflow-wrap:anywhere]">
                   {datos.nombre} · {datos.telefono}
                 </dd>
               </div>
+              {paraOtro && (
+                <div>
+                  <dt className="font-bold text-gris">Recibe</dt>
+                  <dd className="font-semibold [overflow-wrap:anywhere]">
+                    {datos.receptorNombre} · {datos.receptorTelefono}
+                  </dd>
+                </div>
+              )}
             </dl>
-            <ul className="divide-y divide-azul-100 rounded-3xl bg-white px-4 text-sm ring-1 ring-azul/5">
-              {lineasCobrables.map((l) => (
-                <li key={l.producto.id} className="flex justify-between gap-3 py-2">
-                  <span className="min-w-0">
-                    {l.cantidad} × {l.producto.nombre}
-                  </span>
-                  <span className="shrink-0 font-bold">{formatearUsd(l.subtotal)}</span>
-                </li>
-              ))}
-            </ul>
+            <div className="rounded-3xl bg-white px-4 py-3 text-sm ring-1 ring-azul/5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="font-black text-azul">Si algo no está al preparar tu pedido</h2>
+                <label className="flex items-center gap-2 text-xs font-bold text-gris">
+                  Para todos:
+                  <select
+                    onChange={(e) => {
+                      const valor = e.target.value as PreferenciaSustituto;
+                      lineasCobrables.forEach((l) => setSustituto(l.producto.id, valor));
+                    }}
+                    value=""
+                    className="min-h-9 rounded-full bg-crema px-2 text-xs font-bold text-azul"
+                  >
+                    <option value="" disabled>
+                      Elegir
+                    </option>
+                    {(Object.keys(TEXTO_SUSTITUTO) as PreferenciaSustituto[]).map((p) => (
+                      <option key={p} value={p}>
+                        {TEXTO_SUSTITUTO[p]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <ul className="mt-2 divide-y divide-azul-100">
+                {lineasCobrables.map((l) => (
+                  <li key={l.producto.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 py-2">
+                    <span className="min-w-0 flex-1">
+                      {l.cantidad} × {l.producto.nombre}
+                    </span>
+                    <span className="shrink-0 font-bold">{formatearUsd(l.subtotal)}</span>
+                    <label className="w-full">
+                      <span className="sr-only">Si no hay {l.producto.nombre}</span>
+                      <select
+                        value={sustitutos[l.producto.id] ?? "similar"}
+                        onChange={(e) => setSustituto(l.producto.id, e.target.value as PreferenciaSustituto)}
+                        className="min-h-9 w-full rounded-full bg-crema px-3 text-xs font-bold text-azul sm:w-auto"
+                      >
+                        {(Object.keys(TEXTO_SUSTITUTO) as PreferenciaSustituto[]).map((p) => (
+                          <option key={p} value={p}>
+                            Si no hay: {TEXTO_SUSTITUTO[p].toLowerCase()}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         )}
 
@@ -545,6 +736,9 @@ export function Checkout() {
             </dd>
           </div>
         </dl>
+        <div className="mt-4">
+          <ComparadorSucursales compacto />
+        </div>
         <button type="button" onClick={() => navegar({ vista: "inicio", departamento: null, categoria: null, consulta: null, pagina: 1 })} className="mt-4 min-h-11 text-sm font-extrabold text-verde">
           ← Seguir comprando
         </button>

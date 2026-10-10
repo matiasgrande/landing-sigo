@@ -30,6 +30,9 @@ export const metadata: Metadata = {
     description: "8 tiendas, delivery a toda la isla y tu mercado a un mensaje de distancia.",
   },
   twitter: { card: "summary_large_image" },
+  // Instalable en iPhone desde "Agregar a pantalla de inicio"
+  appleWebApp: { capable: true, title: "SIGO", statusBarStyle: "default" },
+  icons: { apple: `${process.env.NEXT_PUBLIC_RUTA_BASE ?? ""}/iconos/apple-touch-icon.png` },
 };
 
 export const viewport: Viewport = {

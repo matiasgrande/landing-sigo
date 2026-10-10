@@ -23,6 +23,8 @@ export interface ProductoCatalogo {
   /** Precio y disponibilidad por sucursal (el precio base es el de Costazul) */
   precioSambilUsd?: number;
   disponibleEn?: { costazul: boolean; sambil: boolean };
+  /** Promoción vigente en % (la define SIGO desde el panel interno) */
+  descuentoPorcentaje?: number;
 }
 
 export const CATALOGO_DEMO: readonly ProductoCatalogo[] = [

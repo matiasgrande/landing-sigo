@@ -42,9 +42,21 @@ export function esMunicipioValido(municipio: unknown): municipio is string {
   return typeof municipio === "string" && TARIFAS_MUNICIPIO.some((t) => t.municipio === municipio);
 }
 
-/** Precio del producto en la sucursal que atiende el pedido */
-export function precioEn(producto: ProductoCatalogo, sucursal: ClaveSucursal): number {
+/** Precio de lista (sin promoción) en la sucursal */
+export function precioRegularEn(producto: ProductoCatalogo, sucursal: ClaveSucursal): number {
   return sucursal === "sambil" && producto.precioSambilUsd ? producto.precioSambilUsd : producto.precioUsd;
+}
+
+/** Precio que se cobra en la sucursal que atiende el pedido (con la promoción vigente, si la hay) */
+export function precioEn(producto: ProductoCatalogo, sucursal: ClaveSucursal): number {
+  const regular = precioRegularEn(producto, sucursal);
+  const descuento = producto.descuentoPorcentaje ?? 0;
+  return descuento > 0 ? Math.round(aCentimos(regular) * (1 - descuento / 100)) / 100 : regular;
+}
+
+/** Ahorro por la promoción en la sucursal (0 si no hay) */
+export function ahorroEn(producto: ProductoCatalogo, sucursal: ClaveSucursal): number {
+  return (aCentimos(precioRegularEn(producto, sucursal)) - aCentimos(precioEn(producto, sucursal))) / 100;
 }
 
 export function disponibleEn(producto: ProductoCatalogo, sucursal: ClaveSucursal): boolean {

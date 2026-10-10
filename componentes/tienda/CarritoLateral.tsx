@@ -1,10 +1,11 @@
 "use client";
 
-import { useTienda, type LineaTienda } from "@/componentes/tienda/ContextoTienda";
+import { TEXTO_SUSTITUTO, useTienda, type LineaTienda, type PreferenciaSustituto } from "@/componentes/tienda/ContextoTienda";
 import { Dialogo, ImagenProducto } from "@/componentes/tienda/Basicos";
 import { useTasa } from "@/componentes/ContextoTasa";
 import { IconoMas, IconoMenos, IconoWhatsApp, IconoMarcador } from "@/componentes/Iconos";
 import { useRef } from "react";
+import { ComparadorSucursales } from "@/componentes/tienda/Comparador";
 import { MINIMO_COMPRA_USD, SUCURSALES_TIENDA, aCentimos, tarifaDelivery, type Entrega } from "@/lib/tienda/comercio";
 import { WHATSAPP_ATENCION, crearEnlaceWhatsApp } from "@/datos/contacto";
 import { formatearBs, formatearUsd } from "@/lib/useTasaBcv";
@@ -18,7 +19,13 @@ export interface Totales {
 }
 
 /** Texto del pedido para WhatsApp: solo lo que tiene existencia, con el desglose del total */
-export function mensajePedido(lineas: LineaTienda[], entrega: Entrega, totales: Totales, encabezado = "¡Hola Sigo! Quiero hacer este pedido:"): string {
+export function mensajePedido(
+  lineas: LineaTienda[],
+  entrega: Entrega,
+  totales: Totales,
+  encabezado = "¡Hola Sigo! Quiero hacer este pedido:",
+  sustitutos?: Record<string, PreferenciaSustituto>,
+): string {
   const cobrables = lineas.filter((l) => l.disponible);
   const destino =
     entrega.modo === "retiro"
@@ -29,7 +36,10 @@ export function mensajePedido(lineas: LineaTienda[], entrega: Entrega, totales: 
   return [
     encabezado,
     "",
-    ...cobrables.map((l) => `• ${l.cantidad} × ${l.producto.nombre} (${formatearUsd(l.subtotal)})`),
+    ...cobrables.map((l) => {
+      const preferencia = sustitutos ? (sustitutos[l.producto.id] ?? "similar") : null;
+      return `• ${l.cantidad} × ${l.producto.nombre} (${formatearUsd(l.subtotal)})${preferencia ? ` · si no hay: ${TEXTO_SUSTITUTO[preferencia].toLowerCase()}` : ""}`;
+    }),
     "",
     destino,
     `Productos: ${formatearUsd(totales.subtotal)}`,
@@ -170,6 +180,12 @@ export function CarritoLateral() {
                 </li>
               ))}
             </ul>
+          </div>
+        )}
+
+        {lineas.length > 0 && (
+          <div className="px-4 pb-3">
+            <ComparadorSucursales compacto />
           </div>
         )}
 

@@ -3,14 +3,19 @@
 import type { ProductoCatalogo } from "@/datos/catalogo";
 import { useTienda } from "@/componentes/tienda/ContextoTienda";
 import { ControlCantidad, ImagenProducto, Precio } from "@/componentes/tienda/Basicos";
-import { SUCURSALES_TIENDA, disponibleEn, precioEn, precioPorUnidad } from "@/lib/tienda/comercio";
+import { SUCURSALES_TIENDA, ahorroEn, disponibleEn, precioEn, precioPorUnidad, precioRegularEn } from "@/lib/tienda/comercio";
 
 export function TarjetaProducto({ producto }: { producto: ProductoCatalogo }) {
   const { sucursal, navegar } = useTienda();
   const precio = precioEn(producto, sucursal);
   const disponible = disponibleEn(producto, sucursal);
   const porUnidad = precioPorUnidad(producto, sucursal);
-  const enOferta = producto.precioAnteriorUsd !== undefined && producto.precioAnteriorUsd > precio;
+  const ahorro = ahorroEn(producto, sucursal);
+  const otra = sucursal === "costazul" ? "sambil" : "costazul";
+  // Dato real: el mismo producto cuesta distinto en cada tienda
+  const masBaratoAqui =
+    disponible && disponibleEn(producto, otra) && precioRegularEn(producto, sucursal) < precioRegularEn(producto, otra) * 0.97;
+  const enOferta = ahorro > 0;
 
   return (
     <article className="flex min-w-0 flex-col rounded-3xl bg-white p-3 ring-1 ring-azul/5 transition hover:shadow-lg hover:shadow-azul/5 sm:p-4">
@@ -23,7 +28,12 @@ export function TarjetaProducto({ producto }: { producto: ProductoCatalogo }) {
         <ImagenProducto producto={producto} className="aspect-square w-full rounded-2xl bg-white" />
         {enOferta && (
           <span className="absolute left-1 top-1 rounded-full bg-coral-700 px-2 py-0.5 text-xs font-extrabold text-white">
-            Ahorra ${((producto.precioAnteriorUsd ?? 0) - precio).toFixed(2)}
+            -{producto.descuentoPorcentaje}% · Ahorra ${ahorro.toFixed(2)}
+          </span>
+        )}
+        {!enOferta && masBaratoAqui && (
+          <span className="absolute left-1 top-1 rounded-full bg-verde px-2 py-0.5 text-xs font-extrabold text-white">
+            Mejor precio en {SUCURSALES_TIENDA[sucursal].corto}
           </span>
         )}
         {!disponible && (
@@ -39,7 +49,7 @@ export function TarjetaProducto({ producto }: { producto: ProductoCatalogo }) {
       </h3>
       <div className="mt-2 flex flex-1 flex-col justify-end gap-2">
         <div>
-          <Precio usd={precio} anterior={enOferta ? producto.precioAnteriorUsd : undefined} />
+          <Precio usd={precio} anterior={enOferta ? precioRegularEn(producto, sucursal) : undefined} />
           {porUnidad && <p className="text-xs text-gris">{porUnidad}</p>}
         </div>
         <ControlCantidad producto={producto} disponible={disponible} compacto />

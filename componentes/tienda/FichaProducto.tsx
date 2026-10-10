@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useTienda } from "@/componentes/tienda/ContextoTienda";
 import { ControlCantidad, Dialogo, ImagenProducto, Precio } from "@/componentes/tienda/Basicos";
-import { SUCURSALES_TIENDA, disponibleEn, nombreLegible, precioEn, precioPorUnidad, type ClaveSucursal } from "@/lib/tienda/comercio";
+import { SUCURSALES_TIENDA, ahorroEn, disponibleEn, nombreLegible, precioEn, precioPorUnidad, precioRegularEn, type ClaveSucursal } from "@/lib/tienda/comercio";
 import { formatearUsd } from "@/lib/useTasaBcv";
 
 export function FichaProducto() {
@@ -39,7 +39,16 @@ export function FichaProducto() {
                 {nombreLegible(producto.departamento ?? "")} › {nombreLegible(producto.categoria)}
               </p>
               <div>
-                <Precio usd={precioEn(producto, sucursal)} grande anterior={producto.precioAnteriorUsd} />
+                {ahorroEn(producto, sucursal) > 0 && (
+                  <p className="mb-1 inline-block rounded-full bg-coral-700 px-3 py-1 text-xs font-extrabold text-white">
+                    Promoción -{producto.descuentoPorcentaje}%
+                  </p>
+                )}
+                <Precio
+                  usd={precioEn(producto, sucursal)}
+                  grande
+                  anterior={ahorroEn(producto, sucursal) > 0 ? precioRegularEn(producto, sucursal) : undefined}
+                />
                 {precioPorUnidad(producto, sucursal) && <p className="text-sm text-gris">{precioPorUnidad(producto, sucursal)}</p>}
               </div>
               <ControlCantidad producto={producto} disponible={disponibleEn(producto, sucursal)} />

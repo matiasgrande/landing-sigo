@@ -317,12 +317,19 @@ export function interpretarPedido(
     // Pedido por peso de un producto que se vende en paquetes: "2 kg de carne" -> 5 paquetes de 400 g
     const pesoPedido = producto.unidad === "unidad" ? pesoPedidoEnGramos(fragmento) : null;
     const pesoPaquete = pesoPedido ? pesoDelPaqueteEnGramos(producto.nombre) : null;
-    if (cantidad.tipo === "valida" && pesoPedido && pesoPaquete && pesoPedido !== pesoPaquete) {
+    // Si el único número escrito es el peso ("500 g de jamón"), la cantidad sale del peso aunque
+    // coincida con el envase; con una cantidad aparte ("2 harina pan 1 kg") se respeta esa cantidad
+    const soloPeso =
+      pesoPedido !== null &&
+      !/\b\d/.test(fragmento.replace(/\b(\d+\/\d+|\d+(?:\.\d+)?)\s*(?:de\s+)?(?:kg|kgs|kilos?|g|gr|grs|gramos?)\b/g, " "));
+    if (cantidad.tipo === "valida" && pesoPedido && pesoPaquete && (pesoPedido !== pesoPaquete || soloPeso)) {
       const paquetes = Math.max(1, Math.round(pesoPedido / pesoPaquete));
       const ajustada = paquetes > MAXIMO_UNIDADES;
       cantidad = { tipo: "valida", valor: Math.min(paquetes, MAXIMO_UNIDADES), ajustada };
       const pedido = pesoPedido >= 1000 ? `${(pesoPedido / 1000).toLocaleString("es-VE")} kg` : `${pesoPedido} g`;
-      avisos.push(`Para ${pedido} de ${producto.nombre.split(/\s\d/)[0]} agregué ${cantidad.valor} paquete${cantidad.valor === 1 ? "" : "s"}.`);
+      if (pesoPedido !== pesoPaquete) {
+        avisos.push(`Para ${pedido} de ${producto.nombre.split(/\s\d/)[0]} agregué ${cantidad.valor} paquete${cantidad.valor === 1 ? "" : "s"}.`);
+      }
     }
     if (cantidad.tipo === "invalida") {
       avisos.push(`¿Cuánto ${producto.nombre} quieres? La cantidad debe ser mayor que cero.`);

@@ -110,7 +110,8 @@ export function ImagenProducto({ producto, className = "" }: { producto: Product
   // El fallo se recuerda por imagen: otra imagen en el mismo lugar vuelve a intentarse
   const [falloEn, setFalloEn] = useState<string | null>(null);
   const fallo = falloEn !== null && falloEn === producto.imagen;
-  if (!producto.imagen || fallo) {
+  const { ahorroDatos } = useTienda();
+  if (!producto.imagen || fallo || ahorroDatos) {
     return (
       <div className={`grid place-items-center bg-crema text-3xl font-black text-azul/20 ${className}`} aria-hidden>
         {producto.nombre.charAt(0)}

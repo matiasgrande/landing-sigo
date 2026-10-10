@@ -5,6 +5,9 @@ import type { ProductoCatalogo } from "@/datos/catalogo";
 import { useTienda } from "@/componentes/tienda/ContextoTienda";
 import { useDepartamentos } from "@/componentes/tienda/CabeceraTienda";
 import { ListaRapida } from "@/componentes/tienda/ListaRapida";
+import { ComprarDeNuevo } from "@/componentes/tienda/Pedidos";
+import { BannerTemporada } from "@/componentes/tienda/Recetas";
+import { SLUG_OFERTAS } from "@/componentes/tienda/Listado";
 import { TarjetaProducto, RejillaCargando } from "@/componentes/tienda/TarjetaProducto";
 import { ImagenProducto } from "@/componentes/tienda/Basicos";
 import { buscarProductos } from "@/lib/tienda/buscar";
@@ -39,6 +42,16 @@ function Estante({ titulo, productos, accion }: { titulo: string; productos: Pro
 
 export function InicioTienda() {
   const { indice, sucursal, navegar, guardados } = useTienda();
+
+  // Promociones vigentes con existencia en la tienda que atiende
+  const ofertas = useMemo(
+    () =>
+      indice?.entradas
+        .map((e) => e.producto)
+        .filter((p) => (p.descuentoPorcentaje ?? 0) > 0 && disponibleEn(p, sucursal))
+        .sort((a, b) => (b.descuentoPorcentaje ?? 0) - (a.descuentoPorcentaje ?? 0)) ?? [],
+    [indice, sucursal],
+  );
   const departamentos = useDepartamentos();
 
   const esenciales = useMemo(() => {
@@ -107,6 +120,13 @@ export function InicioTienda() {
         </div>
       ) : (
         <div className="mx-auto max-w-7xl">
+          <ComprarDeNuevo />
+          <BannerTemporada />
+          <Estante
+            titulo="Ofertas de la semana"
+            productos={ofertas}
+            accion={{ texto: "Ver ofertas y mejores precios", alPulsar: () => navegar({ vista: "listado", departamento: SLUG_OFERTAS, categoria: null, consulta: null, pagina: 1 }) }}
+          />
           {guardados.length > 0 && <Estante titulo="Guardados para después" productos={guardados} />}
           <Estante titulo="Lo esencial de tu mercado" productos={esenciales} />
           <Estante

@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { registrarEvento } from "@/lib/tienda/eventos";
 import type { ProductoCatalogo } from "@/datos/catalogo";
 import { useTienda, type OrdenListado } from "@/componentes/tienda/ContextoTienda";
 import { RejillaCargando, RejillaProductos } from "@/componentes/tienda/TarjetaProducto";
 import { buscarProductos } from "@/lib/tienda/buscar";
-import { SUCURSALES_TIENDA, aSlug, disponibleEn, nombreLegible, precioEn } from "@/lib/tienda/comercio";
+import { SUCURSALES_TIENDA, aSlug, disponibleEn, nombreLegible, precioEn, precioRegularEn } from "@/lib/tienda/comercio";
 
 const POR_PAGINA = 24;
+/** Departamento virtual con promociones y mejores precios */
+export const SLUG_OFERTAS = "ofertas";
 
 const ETIQUETAS_ORDEN: Record<OrdenListado, string> = {
   relevancia: "Relevancia",
@@ -33,6 +36,19 @@ export function Listado() {
         correccion: resultado.correccion ? consulta : null,
         ignoradas: resultado.ignoradas,
       };
+    }
+    if (ruta.departamento === SLUG_OFERTAS) {
+      // Promociones vigentes y lo que cuesta menos en la tienda que te atiende (dato real por sucursal)
+      const otra = sucursal === "costazul" ? "sambil" : "costazul";
+      const ofertas = indice.entradas
+        .map((e) => e.producto)
+        .filter(
+          (p) =>
+            (p.descuentoPorcentaje ?? 0) > 0 ||
+            (disponibleEn(p, otra) && precioRegularEn(p, sucursal) < precioRegularEn(p, otra) * 0.97),
+        )
+        .sort((a, b) => (b.descuentoPorcentaje ?? 0) - (a.descuentoPorcentaje ?? 0));
+      return { ...vacio, titulo: `Ofertas y mejores precios en ${SUCURSALES_TIENDA[sucursal].corto}`, base: ofertas };
     }
     const productos = indice.entradas
       .map((e) => e.producto)
@@ -75,6 +91,15 @@ export function Listado() {
   const pagina = Math.min(ruta.pagina, paginas);
   const visibles = filtrados.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
   const sinDisponibles = ruta.soloDisponibles && filtrados.length === 0 && base.length > 0;
+
+  // Cada búsqueda queda registrada para el panel interno (lo que más se busca y lo que no se encuentra)
+  const ultimaBusqueda = useRef<string | null>(null);
+  useEffect(() => {
+    const consulta = ruta.vista === "buscar" ? (ruta.consulta ?? "").trim().toLowerCase() : "";
+    if (!indice || !consulta || ultimaBusqueda.current === consulta) return;
+    ultimaBusqueda.current = consulta;
+    registrarEvento({ tipo: "busqueda", consulta, resultados: ignoradas.length > 0 ? 0 : base.length });
+  }, [indice, ruta.vista, ruta.consulta, base.length, ignoradas.length]);
 
   // Página fuera de rango en la URL (?pg=999): se corrige sin añadir historial
   useEffect(() => {
