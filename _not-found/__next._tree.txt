@@ -1,0 +1,4 @@
+:HL["/landing-sigo/_next/static/chunks/37o0dewh1y0p1.css","style"]
+2:[["children",{"s":"__PAGE__","h":160}]]
+1:[["children",{"s":"/_not-found","h":64,"c":"$Q2"}]]
+0:{"b":"R4QuKkG627u0Kx7PdvEQG","t":{"t":{"s":"","h":16,"c":"$Q1"}}}

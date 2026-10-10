@@ -1,0 +1,4 @@
+User-Agent: *
+Allow: /
+
+Sitemap: https://matiasgrande.github.io/landing-sigo/sitemap.xml

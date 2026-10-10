@@ -1,0 +1,4 @@
+:HL["/landing-sigo/_next/static/chunks/37o0dewh1y0p1.css","style"]
+:HL["/landing-sigo/_next/static/media/07454f8ad8aaac57-s.p.2kjei9psvcorz.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
+1:[["children",{"s":"__PAGE__","h":128}]]
+0:{"b":"R4QuKkG627u0Kx7PdvEQG","t":{"t":{"s":"","h":16,"c":"$Q1"}}}

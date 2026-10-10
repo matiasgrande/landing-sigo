@@ -1,0 +1,28 @@
+2:"$Sreact.fragment"
+3:"/landing-sigo/_next/static/chunks/0umf92h1sb77c.js"
+4:I[39756,["$3"],"default"]
+5:I[37457,["$3"],"default"]
+a:"/landing-sigo/_next/static/chunks/3o-rnix-led11.js"
+b:I[5500,["$a"],"Image"]
+c:I[22016,["$a"],""]
+d:I[97367,["$3"],"OutletBoundary"]
+e:"$Sreact.suspense"
+11:"ViewportBoundary"
+12:I[97367,["$3"],"$11"]
+13:"MetadataBoundary"
+14:I[97367,["$3"],"$13"]
+15:I[27201,["$3"],"IconMark"]
+7:X
+7:C
+8:X
+9:[["children",{"s":"__PAGE__","h":160,"d":{"r":["$","$2","c",{"children":[["$","main",null,{"id":"contenido","className":"grid min-h-dvh place-items-center bg-crema px-5 py-16 text-center","children":["$","div",null,{"className":"max-w-md","children":[["$","$Lb",null,{"src":{"src":"/landing-sigo/_next/static/media/logo-sigo.3__t6irtj3zmc.png","width":120,"height":120,"blurWidth":8,"blurHeight":8,"blurDataURL":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAA1klEQVR42oXPv+7BUBwF8G9/kh/SQdreXn+vSLCYTYQSIqKN9zEamyCt4SYGkRTRB7iNB7AYrjAZpHsfo5Sd4TOcc6YDYRjCN+D7PnieJ7DzscROxxxjDCKv7r2BZVn/ClZIaoSniRoax0WlGE+mpIQop2fzRQxc1+0ZhnFoaNpCLHRXoPa3L2sBaba53LfBcZy6rusHrdunIhlsAPUoKC1TQB3LtHdNoJQmCSE4ky1guTycSJWxKeFyVVbzyLaXMQiCADjnH9e7ym+PIueXvyhHG/y6+QS1Xni2LLDeJgAAAABJRU5ErkJggg=="},"alt":"SIGO","width":72,"height":72,"className":"mx-auto h-18 w-18","priority":true}],["$","p",null,{"className":"mt-8 text-sm font-extrabold uppercase tracking-[0.18em] text-verde","children":"Error 404"}],["$","h1",null,{"className":"mt-3 text-4xl font-black tracking-tight text-azul","children":"Esta página no está en el anaquel"}],["$","p",null,{"className":"mt-4 text-lg text-gris","children":"Puede que el enlace haya cambiado. Vuelve al inicio o haz tu mercado online."}],["$","div",null,{"className":"mt-8 flex flex-col justify-center gap-3 sm:flex-row","children":[["$","$Lc",null,{"href":"/","className":"rounded-full bg-azul px-6 py-3.5 font-extrabold text-white transition hover:bg-azul-700","children":"Ir al inicio"}],["$","a",null,{"href":"/landing-sigo/tienda/","className":"rounded-full bg-verde px-6 py-3.5 font-extrabold text-white transition hover:bg-verde-700","children":"Compra online"}]]}]]}]}],[["$","script","script-0",{"src":"/landing-sigo/_next/static/chunks/3o-rnix-led11.js","async":true}]],["$","$Ld",null,{"children":["$","$e",null,{"name":"Next.MetadataOutlet","children":"$@f"}]}]]}],"p":"$@10","v":null,"s":"$8"}}]]
+1:[["children",{"s":"/_not-found","h":64,"d":{"r":["$","$2","c",{"children":[null,["$","$L4",null,{"parallelRouterKey":"children","template":["$","$L5",null,{}]}]]}],"p":"$@6","v":"$7","s":"$8"},"c":"$Q9"}]]
+0:{"t":{"t":{"s":"","h":16,"c":"$Q1"},"h":{"r":["$","$2","h",{"children":[["$","meta",null,{"name":"robots","content":"noindex"}],["$","$L12",null,{"children":[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}],["$","meta","2",{"name":"theme-color","content":"#001e63"}]]}],["$","$L14",null,{"children":[["$","div",null,{"hidden":true,"children":["$","$e",null,{"name":"Next.Metadata","children":[["$","title","0",{"children":"Página no encontrada · SIGO Supermercados"}],["$","meta","1",{"name":"description","content":"Esta página no existe. Vuelve al inicio de SIGO Supermercados o haz tu mercado online."}],["$","link","2",{"rel":"manifest","href":"/landing-sigo/manifest.webmanifest"}],["$","meta","3",{"name":"robots","content":"noindex"}],["$","meta","4",{"name":"mobile-web-app-capable","content":"yes"}],["$","meta","5",{"name":"apple-mobile-web-app-title","content":"SIGO"}],["$","meta","6",{"name":"apple-mobile-web-app-status-bar-style","content":"default"}],["$","meta","7",{"property":"og:title","content":"Página no encontrada · SIGO Supermercados"}],["$","meta","8",{"property":"og:description","content":"Esta página no existe. Vuelve al inicio de SIGO Supermercados o haz tu mercado online."}],["$","meta","9",{"property":"og:image","content":"https://matiasgrande.github.io/landing-sigo/opengraph-image.jpg?opengraph-image.2-ajal6w0l8tu.jpg"}],["$","meta","10",{"property":"og:image:type","content":"image/jpeg"}],["$","meta","11",{"property":"og:image:width","content":"1200"}],["$","meta","12",{"property":"og:image:height","content":"630"}],["$","meta","13",{"property":"og:image:alt","content":"SIGO Supermercados: Sirviendo con amor desde 1972, con el asistente que arma tu carrito a partir de tu lista"}],["$","meta","14",{"name":"twitter:card","content":"summary_large_image"}],["$","meta","15",{"name":"twitter:title","content":"Página no encontrada · SIGO Supermercados"}],["$","meta","16",{"name":"twitter:description","content":"Esta página no existe. Vuelve al inicio de SIGO Supermercados o haz tu mercado online."}],["$","meta","17",{"name":"twitter:image","content":"https://matiasgrande.github.io/landing-sigo/opengraph-image.jpg?opengraph-image.2-ajal6w0l8tu.jpg"}],["$","meta","18",{"name":"twitter:image:alt","content":"SIGO Supermercados: Sirviendo con amor desde 1972, con el asistente que arma tu carrito a partir de tu lista"}],["$","meta","19",{"name":"twitter:image:type","content":"image/jpeg"}],["$","meta","20",{"name":"twitter:image:width","content":"1200"}],["$","meta","21",{"name":"twitter:image:height","content":"630"}],["$","link","22",{"rel":"apple-touch-icon","href":"/landing-sigo/iconos/apple-touch-icon.png"}],["$","$L15","23",{}]]}]}],null]}],["$","meta",null,{"name":"next-size-adjust","content":""}]]}],"p":"$@16","v":null,"s":"$8"}},"a":"$@17","u":"$@18","b":"R4QuKkG627u0Kx7PdvEQG"}
+f:null
+18:true
+8:300
+8:C
+17:0
+6:"$undefined"
+16:"$undefined"
+10:"$undefined"
